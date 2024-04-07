@@ -1,1 +1,6 @@
 Haijun, Adnan, Jackson
+
+TODO:
+- Create peer to peer message sending
+- Create chat history synchronization
+- Fully synchronize with multiple game modes
