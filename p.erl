@@ -1,10 +1,10 @@
 -module(p).
 -behaviour(gen_server).
 
--export([create/1, join/2, send_message/1]).
+-export([create/1, join/2, send_messages/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--record(state, {name, peers}).
+-record(state, {name, peers, inRoom}).
 
 -define (COOKIE, scattegories).
 -define (SERVER, scattegories).
@@ -26,7 +26,7 @@ send_message(Message) ->
 
 
 init([Name]) ->
-    {ok, #state{name=Name, peers=[]}}.
+    {ok, #state{name=Name, peers=[], inRoom = false}}.
 
 
 
