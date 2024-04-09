@@ -1,7 +1,7 @@
 -module(p).
 -behaviour(gen_server).
 
--export([create/1, join/2, send_message/1]).
+-export([create/1, join/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {name, peers, inRoom}).
@@ -12,16 +12,24 @@
 -define(DEBUG(Format, Args), io:format(Format, Args)).
 %% -define(DEBUG(Format, Args), void).
 
-create(Name) ->
+setup(Name) ->
     erlang:set_cookie(?COOKIE),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Name], []).
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Name], []),
+    ok.
+
+setup2() ->
+    send_messages(),
+    gen_server:cast(?SERVER, {clientleave}),
+    ok.
+
+create(Name) ->
+    setup(Name),
+    setup2().
 
 join(Name, Node) ->
-    create(Name),
-    gen_server:cast(?SERVER, {clientjoin, Node}).
-
-send_message(Message) ->
-    gen_server:cast(?SERVER, {clientsend, Message}).
+    setup(Name),
+    gen_server:cast(?SERVER, {clientjoin, Node}),
+    setup2().
 
 init([Name]) ->
     {ok, #state{name=Name, peers=[], inRoom = false}}.
@@ -41,12 +49,20 @@ handle_cast({message, Message, Fromname}, State=#state{name=Name}) ->
     io:format("~p received message: ~p: ~p~n", [Name, Fromname, Message]),
     {noreply, State};
 
-handle_cast({clientjoin, Peer}, State=#state{peers=Peers}) ->
+handle_cast({clientjoin, Peer}, State) ->
     ?DEBUG("handle_cast clientjoin~n", []),
-    cast_to_peers({leave, node()}, Peers),
-    % Call to host
     {ok, NewPeers} = gen_server:call({?SERVER, Peer}, {join, node()}),
     {noreply, State#state{peers=[Peer | NewPeers]}};
+
+handle_cast({clientleave}, State=#state{peers=Peers}) ->
+    ?DEBUG("handle_cast clientleave~n", []),
+    cast_to_peers({leave, node()}, Peers),
+    {noreply, State#state{peers=[]}};
+
+handle_cast({leave, Peer}, State=#state{peers=Peers}) ->
+    ?DEBUG("handle_cast leave~n", []),
+    NewPeers = remove_peer(Peer, Peers),
+    {noreply, State#state{peers=NewPeers}};
 
 handle_cast({newpeer, Peer}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast newpeer~n", []),
@@ -67,3 +83,17 @@ cast_to_peers(Message, [Peer | T]) ->
 
 cast_to_peers(_, []) ->
     ok.
+
+remove_peer(Peer, [Peer | T]) -> T;
+remove_peer(Peer, [Peer2 | T]) -> [Peer2 | remove_peer(Peer, T)];
+remove_peer(_Peer, []) -> []. %% might be an error
+
+
+send_messages() ->
+    case io:get_line("Enter a message: ") of
+        "--quit\n" ->
+            ok;
+        Message ->
+            gen_server:cast(?SERVER, {clientsend, Message}),
+            send_messages()
+    end.
