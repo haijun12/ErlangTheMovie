@@ -1,7 +1,7 @@
 -module(p).
 -behaviour(gen_server).
 
--export([create/1, join/2]).
+-export([create/2, join/2, games/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {name, peers, inRoom}).
@@ -22,14 +22,21 @@ setup2() ->
     gen_server:cast(?SERVER, {clientleave}),
     ok.
 
-create(Name) ->
+create(Name, GameName) ->
     setup(Name),
+    %% add game name
+    p_network:update_network({add, node(), GameName}),
+    %% register
     setup2().
 
 join(Name, Node) ->
     setup(Name),
-    gen_server:cast(?SERVER, {clientjoin, Node}),
+    {ok, GameName} = gen_server:call(?SERVER, {clientjoin, Node}),
+    p_network:update_network({add, node(), GameName}),
     setup2().
+
+games () ->
+    p_network:update_network(list).
 
 init([Name]) ->
     {ok, #state{name=Name, peers=[], inRoom = false}}.
@@ -61,7 +68,7 @@ handle_cast({clientleave}, State=#state{peers=Peers}) ->
 
 handle_cast({leave, Peer}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast leave~n", []),
-    NewPeers = remove_peer(Peer, Peers),
+    NewPeers = lists:delete(Peer, Peers),
     {noreply, State#state{peers=NewPeers}};
 
 handle_cast({newpeer, Peer}, State=#state{peers=Peers}) ->
@@ -84,9 +91,6 @@ cast_to_peers(Message, [Peer | T]) ->
 cast_to_peers(_, []) ->
     ok.
 
-remove_peer(Peer, [Peer | T]) -> T;
-remove_peer(Peer, [Peer2 | T]) -> [Peer2 | remove_peer(Peer, T)];
-remove_peer(_Peer, []) -> []. %% might be an error
 
 
 send_messages() ->
