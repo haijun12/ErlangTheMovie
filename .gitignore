@@ -1,4 +1,4 @@
-*.beam
-*.dump
+**/*.beam
+**/*.dump
 player.erl
 player2.erl
