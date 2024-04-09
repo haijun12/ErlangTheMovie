@@ -1,3 +1,4 @@
+scattegories
 Haijun, Adnan, Jackson
 
 TODO:
@@ -18,3 +19,11 @@ TODO:
     - Once all the players finish, game is over
     - Prints out all the answers
     
+=====
+
+An OTP library
+
+Build
+-----
+
+    $ rebar3 compile

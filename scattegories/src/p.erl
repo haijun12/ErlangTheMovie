@@ -44,6 +44,7 @@ handle_cast({message, Message, Fromname}, State=#state{name=Name}) ->
 handle_cast({clientjoin, Peer}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast clientjoin~n", []),
     cast_to_peers({leave, node()}, Peers),
+    % Call to host
     {ok, NewPeers} = gen_server:call({?SERVER, Peer}, {join, node()}),
     {noreply, State#state{peers=[Peer | NewPeers]}};
 

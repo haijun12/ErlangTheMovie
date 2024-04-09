@@ -1,0 +1,3 @@
+-module(scattegories).
+
+-export([]).
