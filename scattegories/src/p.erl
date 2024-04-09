@@ -9,8 +9,8 @@
 -define (COOKIE, scattegories).
 -define (SERVER, scattegories).
 
--define(DEBUG(Format, Args), io:format(Format, Args)).
-%% -define(DEBUG(Format, Args), void).
+%% -define(DEBUG(Format, Args), io:format(Format, Args)).
+-define(DEBUG(Format, Args), void).
 
 setup(Name) ->
     erlang:set_cookie(?COOKIE),
@@ -44,9 +44,9 @@ handle_cast({clientsend, Message}, State=#state{name=Name, peers=Peers}) ->
     cast_to_peers({message, Message, Name}, Peers),
     {noreply, State};
 
-handle_cast({message, Message, Fromname}, State=#state{name=Name}) ->
+handle_cast({message, Message, Fromname}, State) ->
     ?DEBUG("handle_cast message~n", []),
-    io:format("~p received message: ~p: ~p~n", [Name, Fromname, Message]),
+    io:format("~s: ~s", [Fromname, Message]),
     {noreply, State};
 
 handle_cast({clientjoin, Peer}, State) ->
@@ -91,7 +91,7 @@ remove_peer(_Peer, []) -> []. %% might be an error
 
 send_messages() ->
     case io:get_line("Enter a message: ") of
-        "--quit\n" ->
+        "--leave\n" ->
             ok;
         Message ->
             gen_server:cast(?SERVER, {clientsend, Message}),
