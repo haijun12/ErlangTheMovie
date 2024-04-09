@@ -2,35 +2,39 @@
 -behaviour(gen_server).
 
 -export([create/2, join/2, games/0]).
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
+         code_change/3]).
 
--record(state, {name, peers, inRoom}).
+-record(state, {name, peers, gamestate}).
 
 -define (COOKIE, scattegories).
 -define (SERVER, scattegories).
 
-%% -define(DEBUG(Format, Args), io:format(Format, Args)).
--define(DEBUG(Format, Args), void).
+-define(DEBUG(Format, Args), io:format("[DEBUG] " ++ Format, Args)).
+%% -define(DEBUG(Format, Args), void).
 
-setup(Name) ->
+%%============================================================================%%
+%% Client API
+%%============================================================================%%
+
+setup(Name, GameState) ->
     erlang:set_cookie(?COOKIE),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Name], []),
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Name, GameState], []),
     ok.
 
 setup2() ->
     send_messages(),
-    gen_server:cast(?SERVER, {clientleave}),
+    gen_server:call(?SERVER, {clientleave}),
     ok.
 
 create(Name, GameName) ->
-    setup(Name),
-    %% add game name
+    setup(Name, {inroom, GameName}),
     p_network:update_network({add, node(), GameName}),
-    %% register
     setup2().
 
 join(Name, Node) ->
-    setup(Name),
+    setup(Name, {noroom}),
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Name], []),
     {ok, GameName} = gen_server:call(?SERVER, {clientjoin, Node}),
     p_network:update_network({add, node(), GameName}),
     setup2().
@@ -38,41 +42,52 @@ join(Name, Node) ->
 games () ->
     p_network:update_network(list).
 
-init([Name]) ->
-    {ok, #state{name=Name, peers=[], inRoom = false}}.
 
-handle_call({join, Peer}, _From, State=#state{peers=Peers}) ->
+%%============================================================================%%
+%% gen_server
+%%============================================================================%%
+
+init([Name, GameState]) ->
+    {ok, #state{name=Name, peers=[], gamestate=GameState}}.
+
+handle_cast(_Request, State) ->
+    {noreply, State}.
+
+handle_call({clientjoin, Peer}, _From, State) ->
+    ?DEBUG("handle_call clientjoin~n", []),
+    {ok, NewPeers, GameName} = gen_server:call({?SERVER, Peer}, {join, node()}),
+    {reply, {ok, GameName}, State#state{peers=[Peer | NewPeers]}};
+
+handle_call({join, Peer}, _From,
+            State=#state{peers=Peers, gamestate={inroom, GameName}}) ->
     ?DEBUG("handle_call join~n", []),
     cast_to_peers({newpeer, Peer}, Peers),
-    {reply, {ok, Peers}, State#state{peers=[Peer | Peers]}}.
+    {reply, {ok, Peers, GameName}, State#state{peers=[Peer | Peers]}};
 
-handle_call({clientsend, Message}, State=#state{name=Name, peers=Peers}) ->
-    ?DEBUG("handle_cast clientsend~n", []),
+handle_call({clientsend, Message}, _From,
+            State=#state{name=Name, peers=Peers}) ->
+    ?DEBUG("handle_call clientsend~n", []),
     cast_to_peers({message, Message, Name}, Peers),
     {reply, ok, State};
 
-handle_call({message, Message, Fromname}, State) ->
-    ?DEBUG("handle_cast message~n", []),
+handle_call({message, Message, Fromname}, _From, State) ->
+    ?DEBUG("handle_call message~n", []),
     io:format("~s: ~s", [Fromname, Message]),
     {reply, ok, State};
 
-handle_call({clientjoin, Peer}, State) ->
-    ?DEBUG("handle_cast clientjoin~n", []),
-    {ok, NewPeers} = gen_server:call({?SERVER, Peer}, {join, node()}),
-    {reply, ok, State#state{peers=[Peer | NewPeers]}};
-
-handle_call({clientleave}, State=#state{peers=Peers}) ->
-    ?DEBUG("handle_cast clientleave~n", []),
+handle_call({clientleave}, _From, State=#state{peers=Peers}) ->
+    ?DEBUG("handle_call clientleave~n", []),
+    p_network:update_network({delete, node()}),
     cast_to_peers({leave, node()}, Peers),
     {reply, ok, State#state{peers=[]}};
 
-handle_call({leave, Peer}, State=#state{peers=Peers}) ->
-    ?DEBUG("handle_cast leave~n", []),
+handle_call({leave, Peer}, _From, State=#state{peers=Peers}) ->
+    ?DEBUG("handle_call leave~n", []),
     NewPeers = lists:delete(Peer, Peers),
     {reply, ok, State#state{peers=NewPeers}};
 
-handle_call({newpeer, Peer}, State=#state{peers=Peers}) ->
-    ?DEBUG("handle_cast newpeer~n", []),
+handle_call({newpeer, Peer}, _From, State=#state{peers=Peers}) ->
+    ?DEBUG("handle_call newpeer~n", []),
     {reply, ok, State#state{peers=[Peer | Peers]}}.
 
 handle_info(_Info, State) ->
@@ -84,20 +99,18 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-cast_to_peers(Message, [Peer | T]) ->
-    gen_server:cast({?SERVER, Peer}, Message),
-    cast_to_peers(Message, T);
+%%============================================================================%%
+%% Helpers
+%%============================================================================%%
 
-cast_to_peers(_, []) ->
-    ok.
-
-
+cast_to_peers(Cast, Peers) ->
+    util:pmap(fun (Peer) -> gen_server:call({?SERVER, Peer}, Cast) end, Peers).
 
 send_messages() ->
     case io:get_line("Enter a message: ") of
         "--leave\n" ->
             ok;
         Message ->
-            gen_server:cast(?SERVER, {clientsend, Message}),
+            gen_server:call(?SERVER, {clientsend, Message}),
             send_messages()
     end.
