@@ -46,34 +46,34 @@ handle_call({join, Peer}, _From, State=#state{peers=Peers}) ->
     cast_to_peers({newpeer, Peer}, Peers),
     {reply, {ok, Peers}, State#state{peers=[Peer | Peers]}}.
 
-handle_cast({clientsend, Message}, State=#state{name=Name, peers=Peers}) ->
+handle_call({clientsend, Message}, State=#state{name=Name, peers=Peers}) ->
     ?DEBUG("handle_cast clientsend~n", []),
     cast_to_peers({message, Message, Name}, Peers),
-    {noreply, State};
+    {reply, ok, State};
 
-handle_cast({message, Message, Fromname}, State) ->
+handle_call({message, Message, Fromname}, State) ->
     ?DEBUG("handle_cast message~n", []),
     io:format("~s: ~s", [Fromname, Message]),
-    {noreply, State};
+    {reply, ok, State};
 
-handle_cast({clientjoin, Peer}, State) ->
+handle_call({clientjoin, Peer}, State) ->
     ?DEBUG("handle_cast clientjoin~n", []),
     {ok, NewPeers} = gen_server:call({?SERVER, Peer}, {join, node()}),
-    {noreply, State#state{peers=[Peer | NewPeers]}};
+    {reply, ok, State#state{peers=[Peer | NewPeers]}};
 
-handle_cast({clientleave}, State=#state{peers=Peers}) ->
+handle_call({clientleave}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast clientleave~n", []),
     cast_to_peers({leave, node()}, Peers),
-    {noreply, State#state{peers=[]}};
+    {reply, ok, State#state{peers=[]}};
 
-handle_cast({leave, Peer}, State=#state{peers=Peers}) ->
+handle_call({leave, Peer}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast leave~n", []),
     NewPeers = lists:delete(Peer, Peers),
-    {noreply, State#state{peers=NewPeers}};
+    {reply, ok, State#state{peers=NewPeers}};
 
-handle_cast({newpeer, Peer}, State=#state{peers=Peers}) ->
+handle_call({newpeer, Peer}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast newpeer~n", []),
-    {noreply, State#state{peers=[Peer | Peers]}}.
+    {reply, ok, State#state{peers=[Peer | Peers]}}.
 
 handle_info(_Info, State) ->
     {noreply, State}.
