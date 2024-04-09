@@ -1,7 +1,7 @@
 -module(p).
 -behaviour(gen_server).
 
--export([create/1, join/2, send_messages/1]).
+-export([create/1, join/2, send_message/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {name, peers, inRoom}).
@@ -23,18 +23,13 @@ join(Name, Node) ->
 send_message(Message) ->
     gen_server:cast(?SERVER, {clientsend, Message}).
 
-
-
 init([Name]) ->
     {ok, #state{name=Name, peers=[], inRoom = false}}.
-
-
 
 handle_call({join, Peer}, _From, State=#state{peers=Peers}) ->
     ?DEBUG("handle_call join~n", []),
     cast_to_peers({newpeer, Peer}, Peers),
     {reply, {ok, Peers}, State#state{peers=[Peer | Peers]}}.
-
 
 handle_cast({clientsend, Message}, State=#state{name=Name, peers=Peers}) ->
     ?DEBUG("handle_cast clientsend~n", []),
@@ -56,8 +51,6 @@ handle_cast({newpeer, Peer}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast newpeer~n", []),
     {noreply, State#state{peers=[Peer | Peers]}}.
 
-
-
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -70,5 +63,6 @@ code_change(_OldVsn, State, _Extra) ->
 cast_to_peers(Message, [Peer | T]) ->
     gen_server:cast({?SERVER, Peer}, Message),
     cast_to_peers(Message, T);
+
 cast_to_peers(_, []) ->
     ok.
