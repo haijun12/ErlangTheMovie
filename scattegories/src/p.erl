@@ -2,9 +2,9 @@
 -behaviour(gen_server).
 
 -export([create/2, join/2, games/0]).
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([init/1, handle_call/3, handle_info/2, terminate/2, code_change/3]).
 
--record(state, {name, peers, inRoom}).
+-record(state, {name, peers, inRoom, chat_history = []}).
 
 -define (COOKIE, scattegories).
 -define (SERVER, scattegories).
@@ -41,15 +41,16 @@ games () ->
 init([Name]) ->
     {ok, #state{name=Name, peers=[], inRoom = false}}.
 
-handle_call({join, Peer}, _From, State=#state{peers=Peers}) ->
+handle_call({join, Peer, chat_history}, _From, State=#state{peers=Peers, chat_history=ChatHistory}) ->
     ?DEBUG("handle_call join~n", []),
     cast_to_peers({newpeer, Peer}, Peers),
-    {reply, {ok, Peers}, State#state{peers=[Peer | Peers]}}.
+    {reply, {ok, Peers, ChatHistory}, State#state{peers=[Peer | Peers]}}.
 
 handle_call({clientsend, Message}, State=#state{name=Name, peers=Peers}) ->
     ?DEBUG("handle_cast clientsend~n", []),
+    NewChatHistory = State#state.chat_history ++ [{from = Name, message = Message}], % Append message to chat history
     cast_to_peers({message, Message, Name}, Peers),
-    {reply, ok, State};
+    {reply, ok, State#state{chat_history = NewChatHistory}};
 
 handle_call({message, Message, Fromname}, State) ->
     ?DEBUG("handle_cast message~n", []),
@@ -58,8 +59,9 @@ handle_call({message, Message, Fromname}, State) ->
 
 handle_call({clientjoin, Peer}, State) ->
     ?DEBUG("handle_cast clientjoin~n", []),
-    {ok, NewPeers} = gen_server:call({?SERVER, Peer}, {join, node()}),
-    {reply, ok, State#state{peers=[Peer | NewPeers]}};
+    {ok, NewPeers, ChatHistory} = gen_server:call({?SERVER, Peer}, {join, node()}),
+    io:format("Chat History: ~p~n", [State#state.chat_history]),
+    {reply, ok, State#state{peers=[Peer | NewPeers], chat_history=ChatHistory}};
 
 handle_call({clientleave}, State=#state{peers=Peers}) ->
     ?DEBUG("handle_cast clientleave~n", []),
@@ -92,7 +94,6 @@ cast_to_peers(_, []) ->
     ok.
 
 
-
 send_messages() ->
     case io:get_line("Enter a message: ") of
         "--leave\n" ->
@@ -101,3 +102,4 @@ send_messages() ->
             gen_server:cast(?SERVER, {clientsend, Message}),
             send_messages()
     end.
+
