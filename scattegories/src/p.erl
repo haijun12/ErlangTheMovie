@@ -1,7 +1,7 @@
 -module(p).
 -behaviour(gen_server).
 
--export([create/2, join/2, games/0]).
+-export([create/3, join/3, list_games/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
@@ -9,6 +9,7 @@
 
 -define (COOKIE, scattegories).
 -define (SERVER, scattegories).
+-define (DSERVER, peerdistribution).
 
 -define(DEBUG(Format, Args), io:format("[DEBUG] " ++ Format, Args)).
 %% -define(DEBUG(Format, Args), void).
@@ -27,20 +28,22 @@ setup2() ->
     gen_server:call(?SERVER, {clientleave}),
     ok.
 
-create(Name, GameName) ->
+create(Name, GameName, NetworkName) ->
     setup(Name, {inroom, GameName}),
-    p_network:update_network({add, node(), GameName}),
+    gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
+    % p_network:update_network({add, node(), GameName}),
     setup2().
 
-join(Name, Node) ->
+join(Name, Node, NetworkName) ->
     setup(Name, {noroom}),
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Name], []),
     {ok, GameName} = gen_server:call(?SERVER, {clientjoin, Node}),
-    p_network:update_network({add, node(), GameName}),
+    gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
+    % p_network:update_network({add, node(), GameName}),
     setup2().
 
-games () ->
-    p_network:update_network(list).
+list_games (NetworkName) ->
+    gen_server:cast({?DSERVER, NetworkName}, {list}).
 
 
 %%============================================================================%%
@@ -84,9 +87,10 @@ handle_call({message, Message, Fromname}, _From,
     io:format("~s: ~s", [Fromname, Message]),
     {reply, ok, State#state{chat_history=[{Fromname, Message} | ChatHistory]}};
 
-handle_call({clientleave}, _From, State=#state{peers=Peers}) ->
+handle_call({clientleave, NetworkName}, _From, State=#state{peers=Peers}) ->
     ?DEBUG("handle_call clientleave~n", []),
-    p_network:update_network({delete, node()}),
+    gen_server:cast({?DSERVER, NetworkName}, {delete, node()}),
+    % p_network:update_network({delete, node()}),
     cast_to_peers({leave, node()}, Peers),
     {reply, ok, State#state{peers=[]}};
 
@@ -119,7 +123,6 @@ send_messages() ->
     case io:get_line("Enter a message: ") of
         "--leave\n" ->
             ok;
-        "--list\n" -> games(), send_messages();
         Message ->
             gen_server:call(?SERVER, {clientsend, Message}),
             send_messages()

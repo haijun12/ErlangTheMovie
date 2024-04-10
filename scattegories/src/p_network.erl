@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 
 -export ([start/0, update_network/1]).
--export ([init/0, init/1, handle_call/3, handle_cast/2, terminate/2]).
+-export ([init/1, handle_call/3, handle_cast/2, terminate/2]).
 
 -define(COOKIE, scattegories).
 -define(SERVER, peerdistribution).
@@ -17,7 +17,7 @@ start() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 update_network(Message) -> 
-    ?DEBUG("update_network~n", []),
+    ?DEBUG("update_network of ~p~n", [Message]),
     case Message of
         {add, Peer, GameName} -> gen_server:cast(?SERVER, {add, Peer, GameName});
         {delete, Peer} -> gen_server:cast(?SERVER, {delete, Peer});
@@ -41,7 +41,7 @@ handle_cast( {add, Peer, GameName}, State = #state{map=Map}) ->
 
 handle_cast( {delete, Peer}, State = #state{map=Map}) ->
     ?DEBUG("handle_call delete peer~n", []),
-    newMap = lists:filter(fun ({CurrPeer, _}) -> Peer == CurrPeer end, Map),
+    newMap = lists:filter(fun ({CurrPeer, _}) -> Peer =/= CurrPeer end, Map),
     {noreply, State#state{map=newMap}}.
 
 terminate(_Reason, _State) ->
