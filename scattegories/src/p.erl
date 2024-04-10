@@ -119,6 +119,7 @@ send_messages() ->
     case io:get_line("Enter a message: ") of
         "--leave\n" ->
             ok;
+        "--list\n" -> games(), send_messages();
         Message ->
             gen_server:call(?SERVER, {clientsend, Message}),
             send_messages()

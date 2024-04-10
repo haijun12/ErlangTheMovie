@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 
 -export ([start/0, update_network/1]).
--export ([init/1, handle_call/3, handle_cast/2]).
+-export ([init/0, init/1, handle_call/3, handle_cast/2, terminate/2]).
 
 -define(COOKIE, scattegories).
 -define(SERVER, peerdistribution).
@@ -11,7 +11,6 @@
 %% -define(DEBUG(Format, Args), void).
 
 -record(state, {map}).
-
 
 start() ->
     erlang:set_cookie(?COOKIE),
@@ -44,4 +43,7 @@ handle_cast( {delete, Peer}, State = #state{map=Map}) ->
     ?DEBUG("handle_call delete peer~n", []),
     newMap = lists:filter(fun ({CurrPeer, _}) -> Peer == CurrPeer end, Map),
     {noreply, State#state{map=newMap}}.
+
+terminate(_Reason, _State) ->
+    ok.
 
