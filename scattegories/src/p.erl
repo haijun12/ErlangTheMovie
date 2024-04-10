@@ -53,13 +53,15 @@ init([Name, GameState]) ->
 handle_cast(_Request, State) ->
     {noreply, State}.
 
-handle_call({clientjoin, Peer}, _From, State) ->
+handle_call({clientjoin, Peer}, _From, State=#state{chat_history=ChatHistory}) ->
     ?DEBUG("handle_call clientjoin~n", []),
-    {ok, NewPeers, GameName, ChatHistory} = gen_server:call({?SERVER, Peer}, {join, node()}),
-    io:format("Chat History: ~p~n", [State#state.chat_history]),
-    {reply, {ok, GameName}, State#state{peers=[Peer | NewPeers], chat_history=ChatHistory}};
+    {ok, NewPeers, GameName, NewChatHistory} = gen_server:call({?SERVER, Peer}, {join, node()}),
+    io:format("Chat History: ~p~n", [ChatHistory]),
+    {reply, {ok, GameName}, State#state{peers=[Peer | NewPeers],
+                                        gamestate={inroom, GameName},
+                                        chat_history=NewChatHistory}};
 
-handle_call({join, Peer, ChatHistory}, _From,
+handle_call({join, Peer}, _From,
             State=#state{peers=Peers,
                          gamestate={inroom, GameName},
                          chat_history=ChatHistory}) ->
@@ -69,16 +71,18 @@ handle_call({join, Peer, ChatHistory}, _From,
      State#state{peers=[Peer | Peers]}};
 
 handle_call({clientsend, Message}, _From,
-            State=#state{name=Name, peers=Peers}) ->
+            State=#state{name=Name,
+                         peers=Peers,
+                         chat_history=ChatHistory}) ->
     ?DEBUG("handle_call clientsend~n", []),
-    NewChatHistory = State#state.chat_history ++ [{from = Name, message = Message}], % Append message to chat history
     cast_to_peers({message, Message, Name}, Peers),
-    {reply, ok, State#state{chat_history = NewChatHistory}};
+    {reply, ok, State#state{chat_history=[{Name, Message} | ChatHistory]}};
 
-handle_call({message, Message, Fromname}, _From, State) ->
+handle_call({message, Message, Fromname}, _From,
+            State=#state{chat_history=ChatHistory}) ->
     ?DEBUG("handle_call message~n", []),
     io:format("~s: ~s", [Fromname, Message]),
-    {reply, ok, State};
+    {reply, ok, State#state{chat_history=[{Fromname, Message} | ChatHistory]}};
 
 handle_call({clientleave}, _From, State=#state{peers=Peers}) ->
     ?DEBUG("handle_call clientleave~n", []),
