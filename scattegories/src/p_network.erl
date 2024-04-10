@@ -30,19 +30,18 @@ init([]) ->
 handle_call(_Message, _From, State) ->  
     {reply, State, State}.
 
-handle_cast({list}, State = #state{map=Map}) ->  
+handle_call({list}, State = #state{map=Map}) ->  
     ?DEBUG("handle_call list~n", []),
-    lists:foreach(fun({Peer, GameName}) -> io:format("~p : ~p~n", [Peer, GameName]) end, Map), 
-    {noreply, State};
+    {reply, Map, State};
 
-handle_cast( {add, Peer, GameName}, State = #state{map=Map}) ->
+handle_cast({add, Peer, GameName}, State = #state{map=Map}) ->
     ?DEBUG("handle_call add peer~n", []),
     {noreply, State#state{map=[ {Peer, GameName} | Map]}};
 
-handle_cast( {delete, Peer}, State = #state{map=Map}) ->
+handle_cast({delete, Peer}, State = #state{map=Map}) ->
     ?DEBUG("handle_call delete peer~n", []),
-    newMap = lists:filter(fun ({CurrPeer, _}) -> Peer =/= CurrPeer end, Map),
-    {noreply, State#state{map=newMap}}.
+    NewMap = lists:filter(fun ({CurrPeer, _}) -> Peer =/= CurrPeer end, Map),
+    {noreply, State#state{map=NewMap}}.
 
 terminate(_Reason, _State) ->
     ok.
