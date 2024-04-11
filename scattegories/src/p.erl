@@ -78,13 +78,16 @@ handle_call({clientsend, Message}, _From,
                          peers=Peers,
                          chat_history=ChatHistory}) ->
     ?DEBUG("handle_call clientsend~n", []),
-    cast_to_peers({message, Message, Name}, Peers),
+    cast_to_peers({message, Message, Name, Peers, node()}, Peers),
     ?DEBUG("~p~n", [ChatHistory]),
     {reply, ok, State#state{chat_history=[{Name, Message} | ChatHistory]}};
 
-handle_call({message, Message, Fromname}, _From,
-            State=#state{chat_history=ChatHistory}) ->
+handle_call({message, Message, Fromname, Frompeerlist, Frompeer}, _From,
+            State=#state{chat_history=ChatHistory, peers=Peers}) ->
     ?DEBUG("handle_call message~n", []),
+    Peerlist = [Frompeer | lists:delete(node(), Frompeerlist)],
+    Pruned = lists:subtract(Peers, Peerlist),
+    cast_to_peers({message, Message, Fromname, Peers, node()}, Pruned),
     print_message({Fromname, Message}),
     {reply, ok, State#state{chat_history=[{Fromname, Message} | ChatHistory]}};
 
