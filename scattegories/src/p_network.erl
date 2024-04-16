@@ -27,12 +27,10 @@ update_network(Message) ->
 init([]) -> 
     {ok, #state{map=[]}}.
 
-handle_call(_Message, _From, State) ->  
-    {reply, State, State}.
 
-handle_call({list}, State = #state{map=Map}) ->  
+handle_call({list}, _From, State = #state{map=Map}) ->  
     ?DEBUG("handle_call list~n", []),
-    {reply, Map, State};
+    {reply, Map, State}.
 
 handle_cast({add, Peer, GameName}, State = #state{map=Map}) ->
     ?DEBUG("handle_call add peer~n", []),
