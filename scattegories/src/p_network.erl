@@ -24,13 +24,17 @@ update_network(Message) ->
         list -> gen_server:cast(?SERVER, {list})
     end.
 
-init([]) -> 
+init([e]) -> 
     {ok, #state{map=[]}}.
 
 
 handle_call({list}, _From, State = #state{map=Map}) ->  
     ?DEBUG("handle_call list~n", []),
     {reply, Map, State}.
+
+handle_cast({list}, State = #state{map=Map}) ->  
+    ?DEBUG("handle_cast list~p~n", [Map]),
+    {noreply, State};
 
 handle_cast({add, Peer, GameName}, State = #state{map=Map}) ->
     ?DEBUG("handle_call add peer~n", []),
