@@ -27,3 +27,7 @@ Build
 -----
 
     $ rebar3 compile
+
+Build & Run
+-----
+    $ ./runme.sh
