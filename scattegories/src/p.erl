@@ -5,8 +5,6 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
--record(state, {name, peers, gamestate, chat_history = [], network}).
-
 -define (COOKIE, scattegories).
 -define (SERVER, scattegories).
 -define (DSERVER, peerdistribution).
@@ -15,68 +13,84 @@
 -define(DEBUG(Format, Args), void).
 
 %%============================================================================%%
+%%============================================================================%%
+%%============================================================================%%
 %% Client API
 %%============================================================================%%
+%%============================================================================%%
+%%============================================================================%%
 
-setup(Name, GameState, NetworkName) ->
+setup(GameState) ->
     erlang:set_cookie(?COOKIE),
-    gen_server:start_link({local, ?SERVER}, ?MODULE,
-                          [Name, GameState, NetworkName], []),
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [GameState], []),
     ok.
 
-setup2(Name) ->
-    send_messages(Name),
+setup2() ->
+    send_messages(),
     gen_server:call(?SERVER, {clientleave}),
     ok.
 
-create(Name, GameName, NetworkName) ->
-    setup(Name, {inroom, GameName}, NetworkName),
-    gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
+create(Username, GameName, Network) ->
+    GameState = game:init(GameName, Network),
+    MePeer = game:init_peer(node(), Username)
+    GameState2 = game:add_player(MePeer, GameState)
+    setup(GameState2),
+    %% gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
     setup2(Name).
 
-join(Name, Node, NetworkName) ->
-    setup(Name, {noroom}, NetworkName),
-    {ok, GameName} = gen_server:call(?SERVER, {clientjoin, Node}),
-    gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
-    setup2(Name).
+join(Username, Node, Network) ->
+    MePeer = game:init_peer(node(), Username),
+    setup({joining, MePeer, Network}),
+    ok = gen_server:call(?SERVER, {clientjoin, Node}),
+    setup2().
 
-list_games (NetworkName) ->
-    PeerMap = gen_server:call({?DSERVER, NetworkName}, {list}),
+list_games(Network) ->
+    PeerMap = gen_server:call({?DSERVER, Network}, {list}),
     io:format("~p~n", [PeerMap]).
 
 
 %%============================================================================%%
+%%============================================================================%%
+%%============================================================================%%
 %% gen_server
 %%============================================================================%%
+%%============================================================================%%
+%%============================================================================%%
 
-init([Name, GameState, NetworkName]) ->
-    {ok, #state{name=Name, peers=[], gamestate=GameState, network=NetworkName}}.
+init([Username, NetworkName]) ->
+    {ok, game:init(Username, NetworkName
 
 handle_cast(_Request, State) ->
     {noreply, State}.
 
-handle_call({clientjoin, Peer}, _From, State) ->
+%%============================================================================%%
+%% joining
+%%============================================================================%%
+handle_call({clientjoin, JoinNode}, _From, {joining, MePeer, Network}) ->
     ?DEBUG("handle_call clientjoin~n", []),
-    {ok, NewPeers, GameName, NewChatHistory} = gen_server:call({?SERVER, Peer}, {join, node()}),
-    lists:map(fun (HistMsg) -> print_message(HistMsg) end,
-              lists:reverse(NewChatHistory)),
-    {reply, {ok, GameName}, State#state{peers=[Peer | NewPeers],
-                                        gamestate={inroom, GameName},
-                                        chat_history=NewChatHistory}};
+    
+    {ok, GameState} = gen_server:call({?SERVER, Peer}, {join, MePeer}),
+    %% gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
+    {reply, ok, GameState}
 
-handle_call({join, Peer}, _From,
-            State=#state{peers=Peers,
-                         gamestate={inroom, GameName},
-                         chat_history=ChatHistory}) ->
+handle_call({join, JoiningPeer}, _From, GameState) ->
+    %% TODO ensure game hasn't started yet
+    
     ?DEBUG("handle_call join~n", []),
-    cast_to_peers({newpeer, Peer}, Peers),
-    {reply, {ok, Peers, GameName, ChatHistory},
-     State#state{peers=[Peer | Peers]}};
+    cast_to_peers({newpeer, JoiningPeer}, GameState),
+    NewGameState = game:add_player(JoiningPeer, GameState),
+    {reply, {ok, NewGameState}, NewGameState};
 
-handle_call({clientsend, Message}, _From,
-            State=#state{name=Name,
-                         peers=Peers,
-                         chat_history=ChatHistory}) ->
+handle_call({newpeer, JoiningPeer}, _From, GameState) ->
+    ?DEBUG("handle_call newpeer~n", []),
+    NewGameState = game:add_player(JoiningPeer, GameState),
+    {reply, ok, NewGameState}
+
+%%============================================================================%%
+%% messages
+%%============================================================================%%
+
+handle_call({clientsend, Message}, _From, GameState) ->
     ?DEBUG("handle_call clientsend~n", []),
     cast_to_peers({message, Message, Name, Peers, node()}, Peers),
     ?DEBUG("~p~n", [ChatHistory]),
@@ -91,6 +105,10 @@ handle_call({message, Message, Fromname, Frompeerlist, Frompeer}, _From,
     print_message({Fromname, Message}),
     {reply, ok, State#state{chat_history=[{Fromname, Message} | ChatHistory]}};
 
+%%============================================================================%%
+%% leave
+%%============================================================================%%
+
 handle_call({clientleave}, _From,
             State=#state{peers=Peers, network=NetworkName}) ->
     ?DEBUG("handle_call clientleave~n", []),
@@ -103,15 +121,19 @@ handle_call({leave, Peer}, _From, State=#state{peers=Peers}) ->
     NewPeers = lists:delete(Peer, Peers),
     {reply, ok, State#state{peers=NewPeers}};
 
-handle_call({newpeer, Peer}, _From, State=#state{peers=Peers}) ->
-    ?DEBUG("handle_call newpeer~n", []),
-    {reply, ok, State#state{peers=[Peer | Peers]}};
+%%============================================================================%%
+%% list
+%%============================================================================%%
 
 handle_call({list}, _From, State=#state{network=NetworkName}) ->
     ?DEBUG("handle_call list~n", []),
     PeerMap = gen_server:call({?DSERVER, NetworkName}, {list}),
     io:format("~p~n", [PeerMap]),
     {reply, ok, State}.
+
+%%============================================================================%%
+%% 
+%%============================================================================%%
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -123,7 +145,11 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %%============================================================================%%
+%%============================================================================%%
+%%============================================================================%%
 %% Helpers
+%%============================================================================%%
+%%============================================================================%%
 %%============================================================================%%
 
 cast_to_peers(Cast, Peers) ->
