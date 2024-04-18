@@ -1,46 +1,51 @@
 -module(game).
 
--export([init/0, add_player/2, change_round/1, add_data/2]).
+-export([init/2, init_peer/2, add_player/2, change_round/1, add_data/2]).
 
--record (gameState, {numPlayers = 0, round = -1, players_ready = 0, prompts = [], letters = [], leaderboard = [], round_data = []}).
+-record (peer, {node, username}).
+-record (game_state, {round = -1, prompts = [], letters = [], peers = [], round_data = [], game_name, network}).
 
 -define(ENDROUND, 2).
 -define(DEBUG(Format, Args), void).
 
-init() ->
+init(GameName, Network) ->
     % generate prompts with parameter ENDROUND
-    {ok, #gameState{numPlayers = 0, letters = ["A"], prompts= ["An animal"]}}.
+    {ok, #game_state{letters = ["A"], prompts= ["An animal"], game_name=GameName, network = Network}}.
 
-add_player(playerName, #gameState{numPlayers = numPlayers, leaderboard = board}) ->
+init_peer(Node, Username) ->
+    #peer{node=Node, username=Username}.
+
+add_player(Peer, GameState = #game_state{peers = Peers}) ->
+
     ?DEBUG("Adding a new player ~n", []),
     % Assumes round hasn't started
-    {ok, #gameState{numPlayers = numPlayers + 1, leaderboard = [{playerName, 0} | board]}}.
+    {ok, GameState#game_state{peers = [Peer | Peers]}}.
 
 
-add_data(playerData, #gameState{players_ready = players_ready, leaderboard = Board, round_data = Data}) ->
-    ?DEBUG("Player submitted ~n", [playerData]),
-    #gameState{players_ready = players_ready + 1, leaderboard = Board, round_data = [playerData | Data]}.
+add_data(Player_Data, #game_state{players_ready = Players_Ready, leaderboard = Board, round_data = Data}) ->
+    ?DEBUG("Player submitted ~n", [Player_Data]),
+    #game_state{players_ready = Players_Ready + 1, leaderboard = Board, round_data = [Player_Data | Data]}.
 
-change_round(#gameState{round = Round, leaderboard = Board}) when Round == -1 ->
+change_round(#game_state{round = Round, leaderboard = Board}) when Round == -1 ->
     ?DEBUG("Game Starting ~n", []),
     % Handle Starting Game
-    {game_started, #gameState{round = Round + 1, players_ready = 0, leaderboard = Board, round_data = []}};
+    {game_started, #game_state{round = Round + 1, players_ready = 0, leaderboard = Board, round_data = []}};
 
-change_round(#gameState{round = Round, leaderboard = Board, round_data = Data}) when Round ==  ?ENDROUND ->
+change_round(#game_state{round = Round, leaderboard = Board, round_data = Data}) when Round ==  ?ENDROUND ->
     ?DEBUG("Game Ending ~n", []),
     % Handle Ending Game
-    {game_over, #gameState{round = Round + 1, leaderboard = Board, round_data = Data}};
+    {game_over, #game_state{round = Round + 1, leaderboard = Board, round_data = Data}};
 
-change_round(#gameState{round = Round, leaderboard = Board, round_data = Data}) when Round rem 2 == 0 ->
+change_round(#game_state{round = Round, leaderboard = Board, round_data = Data}) when Round rem 2 == 0 ->
     ?DEBUG("Prompt round starting ~n", []),
     % Handle Prompt rounds
-    {new_round, #gameState{round = Round + 1, leaderboard = Board, round_data = Data}};
+    {new_round, #game_state{round = Round + 1, leaderboard = Board, round_data = Data}};
 
-change_round(#gameState{round = Round, leaderboard = Board, round_data = Data}) when Round rem 2 == 1 ->
+change_round(#game_state{round = Round, leaderboard = Board, round_data = Data}) when Round rem 2 == 1 ->
     ?DEBUG("Voting round starting ~n", []),
     % Handle Voting rounds
     % Update the game state or perform specific actions
-    {voting_round, #gameState{round = Round + 1, leaderboard = Board, round_data = Data}}.
+    {voting_round, #game_state{round = Round + 1, leaderboard = Board, round_data = Data}}.
 
 
 
