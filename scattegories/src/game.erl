@@ -27,15 +27,17 @@ client_input(voteready, GameState=#game_state{peers=Peers, round=-1}) ->
     update_peers(voteready, GameState),
     MePeer = peer:get_me_peer(Peers),
     NewPeers = peer:set_peer_data(ready, MePeer, Peers),
-    PeersData = peer:get_data(NewPeers),
-    is_ready=lists:foldl(fun (Data, Accum) -> case Data of not_ready -> not_ready; _ -> Accum end, ready, PeersData),
+    is_ready= is_everybody_ready(NewPeers),
     case is_ready of ready ->
+        ?DEBUG("All players are ready, starting game", []),
         %% reset ALL peer data fields to be SOMETHING
+        NewPeers = lists:map(fun (Peer) -> peer:set_peer_data(not_ready, Peer, Peers) end, NewPeers),
         %% update round number (to concrete number)
-        NewGameState = GameState
+        NewGameState = GameState#game_state{peers=NewPeers, round = 0};
     _ ->
-        NewGameState = GameState#{peers=NewPeers};
-    NewGameState.
+        NewGameState = GameState#game_state{peers=NewPeers}
+    end,
+    NewGameState;
 
 client_input(Action, GameState) ->
     io:format("Unrecognized client action~n", []),
@@ -45,6 +47,8 @@ client_input(Action, GameState) ->
 peer_input(voteready, _FromPeer, GameState) ->
     %% update gamestate so peer is ready
     print_game_state(GameState),
+    GameState;
+peer_input(update_game, _FromPeer, GameState) ->
     GameState;
 
 peer_input({alert_new_peer, JoiningPeer}, _FromPeer, GameState=#game_state{peers=Peers}) ->
@@ -68,6 +72,14 @@ update_peers(Action, #game_state{peers=Peers}) ->
     PeerNodes = peer:get_peer_nodes(PeersSansMePeer),
     util:pmap(fun (PeerNode) -> gen_server:call({?SERVER, PeerNode}, {peerinput, Action, MePeer}) end, PeerNodes).
 
+is_everybody_ready(Peers) ->
+    PeersData = peer:get_data(Peers),
+    lists:foldl(fun(Data, Accum) ->
+                    case Data of
+                        not_ready -> not_ready;
+                        _ -> Accum
+                    end
+                end, ready, PeersData).
 
 print_game_state(#game_state{round=Round}) ->
     ?DEBUG("round: ~p~n", [Round]).
