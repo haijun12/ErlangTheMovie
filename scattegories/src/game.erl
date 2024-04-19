@@ -9,17 +9,20 @@
 -define(DEBUG(Format, Args), void).
 
 init(GameName, Network) ->
-    % generate prompts with parameter ENDROUND
-    {ok, #game_state{letters = ["A"], prompts= ["An animal"], game_name=GameName, network = Network}}.
+    #game_state{letters = ["A"], prompts= ["An animal"], game_name=GameName, network = Network}.
 
 init_peer(Node, Username) ->
     #peer{node=Node, username=Username}.
 
-add_player(Peer, GameState = #game_state{peers = Peers}) ->
 
+add_player(Peer, GameState=#game_state{peers = Peers}) ->
     ?DEBUG("Adding a new player ~n", []),
     % Assumes round hasn't started
     {ok, GameState#game_state{peers = [Peer | Peers]}}.
+
+vote_start(GameState=#game_state{peers=Peers}) ->
+    %% handle vote start!
+    peer_input(votestart, GameState)
 
 
 add_data(Player_Data, #game_state{players_ready = Players_Ready, leaderboard = Board, round_data = Data}) ->
@@ -47,10 +50,12 @@ change_round(#game_state{round = Round, leaderboard = Board, round_data = Data})
     % Update the game state or perform specific actions
     {voting_round, #game_state{round = Round + 1, leaderboard = Board, round_data = Data}}.
 
+alert_new_peer(JoiningPeer, GameState) ->
+    peer_input({newpeer, JoiningPeer}, GameState).
 
+%%============================================================================%%
+%% non-exported helpers
+%%============================================================================%%
 
-
-
-    
-
-
+peer_input(Action, GameState=#{peer=Peers}) ->
+    util:pmap(fun (Peer) -> gen_server:call({?SERVER, Peer}, {peerinput, node(), Action}) end, Peers).
