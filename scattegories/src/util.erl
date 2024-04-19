@@ -1,6 +1,9 @@
 -module(util).
 -export([pmap/2, pm_runfun/3]).
 
+-define(DEBUG(Format, Args), io:format("[DEBUG] [game.erl] " ++ Format, Args)).
+%% -define(DEBUG(Format, Args), void).
+
 pmap(F, L) ->
     Pidlist = pm_pidlist(F, L),
     pm_getresults(Pidlist).
@@ -20,3 +23,4 @@ pm_getresults([Pid | T]) ->
         {Pid, MV} -> 
             [MV | pm_getresults(T)]
     end.
+

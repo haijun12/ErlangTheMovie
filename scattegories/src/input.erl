@@ -2,10 +2,12 @@
 
 -export([parse/1, handle_input/0]).
 
--define(DEBUG(Format, Args), void).
+-define (COOKIE, scattegories).
+-define (SERVER, scattegories).
+-define (DSERVER, peerdistribution).
 
-parse("start") ->
-    votestart;
+parse("start\n") ->
+    voteready;
 
 parse(_) ->
     unrecognized.

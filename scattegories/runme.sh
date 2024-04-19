@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Function to compile the rebar3 directory
 compile_rebar3_directory() {
