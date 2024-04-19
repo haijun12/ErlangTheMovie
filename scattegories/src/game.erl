@@ -25,29 +25,21 @@ add_player(JoiningPeer, GameState=#game_state{peers = Peers}) ->
 
 client_input(voteready, GameState=#game_state{peers=Peers, round=-1}) ->
     update_peers(voteready, GameState),
-    MePeer = peer:get_me_peer(Peers),
-    NewPeers = peer:set_peer_data(ready, MePeer, Peers),
-    is_ready= is_everybody_ready(NewPeers),
-    case is_ready of ready ->
-        ?DEBUG("All players are ready, starting game", []),
-        %% reset ALL peer data fields to be SOMETHING
-        NewPeers = lists:map(fun (Peer) -> peer:set_peer_data(not_ready, Peer, Peers) end, NewPeers),
-        %% update round number (to concrete number)
-        NewGameState = GameState#game_state{peers=NewPeers, round = 0};
-    _ ->
-        NewGameState = GameState#game_state{peers=NewPeers}
-    end,
-    NewGameState;
+    MePeer = gamepeer:get_me_peer(Peers),
+    NewPeers = gamepeer:set_peer_data(ready, MePeer, Peers),
+    NewGameState = GameState#game_state{peers=NewPeers},
+    advance_if_all_ready(NewGameState);
 
 client_input(Action, GameState) ->
     io:format("Unrecognized client action~n", []),
     ?DEBUG("Action was ~p~n", [Action]),
     GameState.
 
-peer_input(voteready, _FromPeer, GameState) ->
-    %% update gamestate so peer is ready
-    print_game_state(GameState),
-    GameState;
+peer_input(voteready, FromPeer, GameState=#game_state{peers=Peers, round=-1}) ->
+    NewPeers = gamepeer:set_peer_data(ready, FromPeer, Peers),
+    NewGameState = GameState#game_state{peers=NewPeers},
+    advance_if_all_ready(NewGameState);
+
 peer_input(update_game, _FromPeer, GameState) ->
     GameState;
 
@@ -66,20 +58,31 @@ peer_input(Action, FromPeer, GameState) ->
 %% non-exported helpers
 %%============================================================================%%
 
+update_peers(_, #game_state{peers=[]}) ->
+    %% this will only happen at the beginning of the game when the first user
+    %% adds themselves
+    [ok];
 update_peers(Action, #game_state{peers=Peers}) ->
-    MePeer = peer:get_me_peer(Peers),
+    MePeer = gamepeer:get_me_peer(Peers),
     PeersSansMePeer = lists:delete(MePeer, Peers),
-    PeerNodes = peer:get_peer_nodes(PeersSansMePeer),
+    PeerNodes = gamepeer:get_peer_nodes(PeersSansMePeer),
     util:pmap(fun (PeerNode) -> gen_server:call({?SERVER, PeerNode}, {peerinput, Action, MePeer}) end, PeerNodes).
-
-is_everybody_ready(Peers) ->
-    PeersData = peer:get_data(Peers),
-    lists:foldl(fun(Data, Accum) ->
-                    case Data of
-                        not_ready -> not_ready;
-                        _ -> Accum
-                    end
-                end, ready, PeersData).
 
 print_game_state(#game_state{round=Round}) ->
     ?DEBUG("round: ~p~n", [Round]).
+
+advance_if_all_ready(GameState=#game_state{peers=Peers, round=Round}) ->
+    PeersData = gamepeer:get_data(Peers),
+    IsReady = lists:foldl(fun(Data, Accum) ->
+                              case Data of
+                                  not_ready -> not_ready;
+                                  _ -> Accum
+                              end
+                          end, ready, PeersData),
+    case IsReady of ready ->
+        io:format("All players are ready, advancing to ~p", [Round + 1]),
+        NewPeers = gamepeer:set_all_data(not_ready, Peers),
+        GameState#game_state{peers=NewPeers, round=Round + 1};
+    _ ->
+        GameState
+    end.

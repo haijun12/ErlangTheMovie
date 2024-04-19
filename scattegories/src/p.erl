@@ -33,14 +33,14 @@ setup2() ->
 create(MePeerName, GameName, Network) ->
     GameState = game:init(GameName, Network),
     MePeerNode = node(),
-    MePeer = game:init_peer(MePeerNode, MePeerName),
+    MePeer = gamepeer:init(MePeerNode, MePeerName),
     GameState2 = game:add_player(MePeer, GameState),
     setup(GameState2),
     setup2().
 
 join(MePeerName, JoinPeerNode, Network) ->
     MePeerNode = node(),
-    MePeer = game:init_peer(MePeerNode, MePeerName),
+    MePeer = gamepeer:init(MePeerNode, MePeerName),
     setup({joining, MePeer, Network}),
     ok = gen_server:call(?SERVER, {clientjoin, JoinPeerNode}),
     setup2().
