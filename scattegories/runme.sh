@@ -15,7 +15,7 @@ start_erlang_interpreter_with_network() {
 start_erlang_interpreter() {
   local name=$1
   echo "Starting Erlang interpreter with module name $name..."
-  erl -pa _build/default/lib/*/ebin -sname "$name"
+  erl -pa _build/default/lib/*/ebin -sname "$name" -eval 'scattegories:start().'
 }
 
 # Check if rebar3 is installed
