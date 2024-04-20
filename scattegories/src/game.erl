@@ -2,7 +2,7 @@
 
 -export([init/2, add_player/2, client_input/2, peer_input/3]).
 
--record (game_state, {round = -1, prompts = [], letters = [], peers = [], game_name, network}).
+-record (game_state, {round = -1, prompts = [], peers = [], game_name, network}).
 
 -define(ENDROUND, 2).
 -define (COOKIE, scattegories).
@@ -13,20 +13,34 @@
 %% -define(DEBUG(Format, Args), void).
 
 init(GameName, Network) ->
-    #game_state{letters = ["A"], prompts= ["An animal"], game_name=GameName, network = Network}.
-
-
+    #game_state{prompts= [{"A", "An animal"}, {"B", "A fruit"}], game_name=GameName, network = Network}.
 
 add_player(JoiningPeer, GameState=#game_state{peers = Peers}) ->
     ?DEBUG("Adding a new player ~n", []),
+    ?DEBUG("New peer: ~p~n", [JoiningPeer]),
+    ?DEBUG("Peer list: ~p~n", [Peers]),
     % Assumes round hasn't started
     update_peers({alert_new_peer, JoiningPeer}, GameState),
     GameState#game_state{peers = [JoiningPeer | Peers]}.
 
-client_input(voteready, GameState=#game_state{peers=Peers, round=-1}) ->
+client_input("ready", GameState=#game_state{peers=Peers, round=-1}) ->
     update_peers(voteready, GameState),
     MePeer = gamepeer:get_me_peer(Peers),
     NewPeers = gamepeer:set_peer_data(ready, MePeer, Peers),
+    NewGameState = GameState#game_state{peers=NewPeers},
+    advance_if_all_ready(NewGameState);
+
+client_input(Input, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 0 ->
+    update_peers({submit, Input}, GameState),
+    MePeer = gamepeer:get_me_peer(Peers),
+    NewPeers = gamepeer:set_peer_data(Input, MePeer, Peers),
+    NewGameState = GameState#game_state{peers=NewPeers},
+    advance_if_all_ready(NewGameState);
+
+client_input(Input, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 1 ->
+    update_peers({vote, Input}, GameState),
+    MePeer = gamepeer:get_me_peer(Peers),
+    NewPeers = gamepeer:set_peer_data(Input, MePeer, Peers),
     NewGameState = GameState#game_state{peers=NewPeers},
     advance_if_all_ready(NewGameState);
 
@@ -40,8 +54,15 @@ peer_input(voteready, FromPeer, GameState=#game_state{peers=Peers, round=-1}) ->
     NewGameState = GameState#game_state{peers=NewPeers},
     advance_if_all_ready(NewGameState);
 
-peer_input(update_game, _FromPeer, GameState) ->
-    GameState;
+peer_input({submit, Input}, FromPeer, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 0 ->
+    NewPeers = gamepeer:set_peer_data(Input, FromPeer, Peers),
+    NewGameState = GameState#game_state{peers=NewPeers},
+    advance_if_all_ready(NewGameState);
+
+peer_input({vote, Input}, FromPeer, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 1 ->
+    NewPeers = gamepeer:set_peer_data(Input, FromPeer, Peers),
+    NewGameState = GameState#game_state{peers=NewPeers},
+    advance_if_all_ready(NewGameState);
 
 peer_input({alert_new_peer, JoiningPeer}, _FromPeer, GameState=#game_state{peers=Peers}) ->
     print_game_state(GameState),
@@ -80,9 +101,28 @@ advance_if_all_ready(GameState=#game_state{peers=Peers, round=Round}) ->
                               end
                           end, ready, PeersData),
     case IsReady of ready ->
-        io:format("All players are ready, advancing to ~p", [Round + 1]),
-        NewPeers = gamepeer:set_all_data(not_ready, Peers),
-        GameState#game_state{peers=NewPeers, round=Round + 1};
+        io:format("All players are ready, advancing to ~p~n", [Round + 1]),
+        NewPeers = gamepeer:shift_data(Peers),
+        NewPeers2 = gamepeer:set_all_data(not_ready, NewPeers),
+        NewGameState = GameState#game_state{peers=NewPeers2, round=Round + 1},
+        print_round_prompt(NewGameState),
+        shift_prompts(NewGameState);
     _ ->
         GameState
     end.
+
+print_round_prompt(#game_state{round=Round, prompts=[{Letter, Prompt} | _T]}) when Round rem 2 == 0 ->
+    io:format("~nPrompt: ~s, Letter: ~s~n", [Prompt, Letter]),
+    io:format("Enter your answer:~n");
+
+print_round_prompt(#game_state{round=Round, prompts=[{Letter, Prompt} | _T], peers=Peers}) when Round rem 2 == 1 ->
+    io:format("~nPrompt: ~s, Letter: ~s~n", [Prompt, Letter]),
+    io:format("Responses:~n", []),
+    UsernameData = gamepeer:get_username_data_old(Peers),
+    lists:map(fun ({Username, Data}) -> io:format("~s: ~s~n", [Username, Data]) end, UsernameData),
+    io:format("Vote by username:~n").
+
+shift_prompts(GameState=#game_state{round=Round}) when Round rem 2 == 0 ->
+    GameState;
+shift_prompts(GameState=#game_state{round=Round, prompts=[_P | Prompts]}) when Round rem 2 == 1 ->
+    GameState#game_state{prompts=Prompts}.

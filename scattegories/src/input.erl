@@ -1,27 +1,22 @@
 -module(input).
 
--export([parse/1, handle_input/0]).
+-export([handle_input/0]).
 
 -define (COOKIE, scattegories).
 -define (SERVER, scattegories).
 -define (DSERVER, peerdistribution).
 
-parse("start\n") ->
-    voteready;
-
-parse(_) ->
-    unrecognized.
-
 
 handle_input() ->
     case io:get_line("SCATTERGORIES # ") of
-        "leave\n" ->
+        "--leave\n" ->
             ok;
-        "list\n" ->
+        "--list\n" ->
             gen_server:call(?SERVER, {list}),
             handle_input();
         Input ->
-            Action = parse(Input),
-            gen_server:call(?SERVER, {clientinput, Action}),
+            [_H | Input2] = lists:reverse(Input),
+            Input3 = lists:reverse(Input2),
+            gen_server:call(?SERVER, {clientinput, Input3}),
             handle_input()
     end.
