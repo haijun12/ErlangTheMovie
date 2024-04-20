@@ -1,6 +1,6 @@
 -module(gamepeer).
 
--export([init/2, get_me_peer/1, get_peer_nodes/1, set_peer_data/3, set_all_data/2, shift_data/1, get_data/1, get_username_data_old/1]).
+-export([init/2, get_me_peer/1, get_peer_nodes/1, set_peer_data/3, set_all_data/2, shift_data/1, get_data/1, get_username_data_old/1, does_username_exist/2]).
 
 -record (peer, {node, name, data, data_old, points}).
 
@@ -36,3 +36,9 @@ get_data(Peers) ->
 
 get_username_data_old(Peers) ->
     lists:map(fun (#peer{name=Name, data_old=DataOld}) -> {Name, DataOld} end, Peers).
+
+does_username_exist(_, []) -> false;
+does_username_exist(Username, [#peer{name=Username} | _T]) -> true;
+does_username_exist(Username, [_ | Peers]) -> does_username_exist(Username, Peers).
+
+

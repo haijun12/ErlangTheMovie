@@ -36,13 +36,19 @@ client_input(Input, GameState=#game_state{peers=Peers, round=Round}) when Round 
     NewPeers = gamepeer:set_peer_data(Input, MePeer, Peers),
     NewGameState = GameState#game_state{peers=NewPeers},
     advance_if_all_ready(NewGameState);
-
+    
 client_input(Input, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 1 ->
-    update_peers({vote, Input}, GameState),
-    MePeer = gamepeer:get_me_peer(Peers),
-    NewPeers = gamepeer:set_peer_data(Input, MePeer, Peers),
-    NewGameState = GameState#game_state{peers=NewPeers},
-    advance_if_all_ready(NewGameState);
+    case gamepeer:does_username_exist(Input, Peers) of
+        true ->
+            update_peers({vote, Input}, GameState),
+            MePeer = gamepeer:get_me_peer(Peers),
+            NewPeers = gamepeer:set_peer_data(Input, MePeer, Peers),
+            NewGameState = GameState#game_state{peers=NewPeers},
+            advance_if_all_ready(NewGameState);
+        _ ->
+            io:format("Unrecognized username~n", []),
+            GameState
+    end;
 
 client_input(Action, GameState) ->
     io:format("Unrecognized client action~n", []),
@@ -94,6 +100,7 @@ print_game_state(#game_state{round=Round}) ->
 
 advance_if_all_ready(GameState=#game_state{peers=Peers, round=Round}) ->
     PeersData = gamepeer:get_data(Peers),
+
     IsReady = lists:foldl(fun(Data, Accum) ->
                               case Data of
                                   not_ready -> not_ready;
