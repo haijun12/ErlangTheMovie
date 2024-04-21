@@ -2,6 +2,7 @@
 
 -export([init/2, get_me_peer/1, get_peer_nodes/1, set_peer_data/3, set_all_data/2, shift_data/1, get_data/1, get_username_data_old/1]).
 
+-export([add_peer_points/2, get_current_points/1, check_valid_vote/2]).
 -record (peer, {node, name, data, data_old, points}).
 
 -define(DEBUG(Format, Args), io:format("[DEBUG] [gamepeer.erl] " ++ Format, Args)).
@@ -24,6 +25,21 @@ set_peer_data(SetData, #peer{node=SetPeerNode}, Peers) ->
                       _ -> Peer
                   end
               end, Peers).
+
+add_peer_points(Username, Peers) ->
+     lists:map(fun (Peer=#peer{name=PeerName, points=Points}) ->
+                  case PeerName of
+                      Username -> Peer#peer{points=Points + 1};
+                      _ -> Peer
+                  end
+              end, Peers).
+
+get_current_points(Peers) -> 
+    NamePoints = lists:map(fun (#peer{name=Name, points=Points}) -> {Name, Points} end, Peers),
+    lists:sort(fun ({_, P1}, {_, P2}) -> P1 < P2 end, NamePoints).
+
+check_valid_vote(Input, Peers) ->
+    lists:any(fun (#peer{name=Name, node=Node}) -> Name == Input andalso Node =/= node() end, Peers).
 
 set_all_data(SetData, Peers) ->
     lists:map(fun (Peer) -> Peer#peer{data=SetData} end, Peers).
