@@ -2,15 +2,15 @@
 -export([start_timer/1]).
 
 start_timer(Duration) ->
-    spawn(fun() -> timer(Duration) end).
+    timer(Duration).
 
-timer(Duration) ->
-    timer(Duration, Duration).
+%timer(Duration) ->%
+%   timer(Duration, Duration).%
 
-timer(0, _) ->
-    io:fwrite("\rTime's up!~n");
+timer(0) ->
+    io:fwrite("\rTime's up!               ");
 
-timer(Remaining, Duration) ->
-    io:fwrite("\rTime remaining: ~2B seconds", [Remaining]),
+timer(Remaining) ->
+    io:fwrite("\r Time remaining: ~2B seconds              ", [Remaining]),
     timer:sleep(1000),
-    timer(Remaining - 1, Duration).
+    timer(Remaining - 1).

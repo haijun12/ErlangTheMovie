@@ -5,13 +5,23 @@ compile_rebar3_directory() {
   echo "Compiling rebar3 directory..."
   rebar3 compile
 }
+start_erlang_interpreter_with_admin() {
+  local name=$1
+  echo "Starting Erlang interpreter with module name $name and the network"
+  
+  erl -pa _build/default/lib/*/ebin -sname "$name"
+}
 
 start_erlang_interpreter_with_network() {
   local name=$1
   echo "Starting Erlang interpreter with module name $name and the network"
-  
-  erl -pa _build/default/lib/*/ebin -sname "$name" -eval 'p_network:start().' -noshell
+  HOSTNAME=$(hostname | cut -d '.' -f 1)
+  NETWORK="$name@$HOSTNAME"
+  export NETWORK
+  echo "$NETWORK"
+  erl -pa _build/default/lib/*/ebin -sname "$name" -eval 'p_network:start().'
 }
+
 start_erlang_interpreter() {
   local name=$1
   echo "Starting Erlang interpreter with module name $name..."
@@ -26,17 +36,19 @@ then
 fi
 
 # Prompt the user for input
-echo "Enter the name of your username (or press Enter to skip):"
+echo "Enter the name of your node (or press Enter to skip):"
 read name
 DEFAULT_NETWORK="scattegories_network"
 # Compile the rebar3 directory
 compile_rebar3_directory
 
 # Start the Erlang interpreter with the compiled modules in the code path and the specified module name
-if [ "$name" == "scattegories_network" ]; then
-  start_erlang_interpreter_with_network "$name"
+if [ "$name" == "$DEFAULT_NETWORK" ]; then
+    start_erlang_interpreter_with_network "$name"
+elif [ "$name" == "admin" ]; then
+    start_erlang_interpreter_with_admin "$name"
 elif [[ -n "$name" ]]; then
-  start_erlang_interpreter "$name"
+    start_erlang_interpreter "$name"
 else
-  start_erlang_interpreter "no_name"
+    start_erlang_interpreter "no_name"
 fi

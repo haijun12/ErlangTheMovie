@@ -13,7 +13,8 @@
 -define(DEBUG(Format, Args), void).
 
 init(GameName, Network) ->
-    #game_state{prompts= [{"A", "An animal"}, {"B", "A fruit"}], game_name=GameName, network=Network}.
+    Prompts = generate_prompts:select_prompts("categories.txt", ?ENDROUND),
+    #game_state{prompts= Prompts, game_name=GameName, network=Network}.
 
 add_player(JoiningPeer, GameState=#game_state{round = -1, peers = Peers}) ->
     ?DEBUG("Adding a new player ~n", []),
@@ -36,7 +37,9 @@ client_input("ready", GameState=#game_state{peers=Peers, round=-1}) ->
     NewGameState = GameState#game_state{peers=NewPeers},
     advance_if_all_ready(NewGameState);
 
-% Add leaving
+client_input(_Input, GameState=#game_state{round=Round, prompts=[]}) when Round rem 2 == 0 ->
+    io:format("Game is over, type leave to leave the game!~n", []),
+    GameState;
 
 client_input(Input, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 0 ->
     update_peers({submit, Input}, GameState),
@@ -72,6 +75,7 @@ peer_input(voteready, FromPeer, GameState=#game_state{peers=Peers, round=-1}) ->
 peer_input({submit, Input}, FromPeer, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 0 ->
     NewPeers = gamepeer:set_peer_data(Input, FromPeer, Peers),
     NewGameState = GameState#game_state{peers=NewPeers},
+
     advance_if_all_ready(NewGameState);
 
 peer_input({vote, Input}, FromPeer, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 1 ->
@@ -114,16 +118,19 @@ update_peers(Action, #game_state{peers=Peers}) ->
 print_game_state(GameState=#game_state{round=Round, prompts=Prompts, game_name=GameName}) ->
     State = case Round of
                 -1 -> "lobby";
-                R1 when R1 rem 2 == 0 -> "inputting";
-                R2 when R2 rem 2 == 1 -> "voting"
+                R1 when R1 rem 2 == 0 -> case Prompts of 
+                                            [] -> "Game Over";
+                                            _ -> "Inputting"
+                                            end;
+                R2 when R2 rem 2 == 1 -> "Voting"
             end,
-    State2 = case Prompts of
-                 [] -> "game over";
-                 _ -> State
-             end,
+    % State2 = case Prompts of
+    %              [] -> "game over";
+    %              _ -> State
+    %          end,
     io:format("~n~n~n~n~n~n~n~n~n~n~n~n", []),
-    io:format("################################################################################~n", []),
-    io:format("game: ~s    state: ~s~n~n", [GameName, State2]),
+    io:format("##########################################################################~n", []),
+    io:format("Game: ~s   State: ~s~n~n", [GameName, State]),
     print_round_prompt(GameState).
 
 advance_if_all_ready(GameState=#game_state{peers=Peers, round=Round}) ->
@@ -144,6 +151,12 @@ advance_if_all_ready(GameState=#game_state{peers=Peers, round=Round}) ->
         GameState
     end.
 
+print_stats(#game_state{prompts=[], peers=Peers}) ->
+    % Show score here
+    LeaderBoard = gamepeer:get_current_points(Peers),
+    io:format("Final Leaderboard:~n", []),
+    lists:map(fun ({Username, Points}) -> io:format("~s: ~p~n", [Username, Points]) end, LeaderBoard);
+
 print_stats(#game_state{prompts=[{Letter, Prompt} | _T], peers=Peers}) ->
     % Show score here
     LeaderBoard = gamepeer:get_current_points(Peers),
@@ -152,9 +165,16 @@ print_stats(#game_state{prompts=[{Letter, Prompt} | _T], peers=Peers}) ->
     % Print prompts for next round
     io:format("~nPrompt: ~s, Letter: ~s~n~n", [Prompt, Letter]).
 
+print_round_prompt(#game_state{round=Round, prompts=[], peers=Peers}) when Round rem 2 == 0 ->
+    io:format("Game Over!~n", []),
+    % Show score here
+    LeaderBoard = gamepeer:get_current_points(Peers),
+    io:format("Leaderboard:~n", []),
+    lists:map(fun ({Username, Points}) -> io:format("~s: ~p~n", [Username, Points]) end, LeaderBoard);
+
 print_round_prompt(GameState=#game_state{round=Round, peers=Peers}) when Round rem 2 == 0 ->
     print_stats(GameState),
-    io:format("Submitted: ~n", []),
+    io:format("Submitted: ~n~n", []),
     UsernameData = gamepeer:get_username_data(Peers),
     lists:map(fun ({Username, Data}) ->
                   Data2 = case Data of
@@ -193,12 +213,6 @@ print_round_prompt(GameState=#game_state{round=Round, peers=Peers}) when Round r
             io:format("Voted: ~s~n", [Data])
     end;
 
-print_round_prompt(#game_state{round=Round, prompts=[], peers=Peers}) when Round rem 2 == 0 ->
-    io:format("Game Over!~n", []),
-    % Show score here
-    LeaderBoard = gamepeer:get_current_points(Peers),
-    io:format("Leaderboard:~n", []),
-    lists:map(fun ({Username, Points}) -> io:format("~s: ~p~n", [Username, Points]) end, LeaderBoard);
 
 print_round_prompt(#game_state{round=-1, peers=Peers}) ->
     io:format("Ready: ~n", []),
@@ -218,12 +232,16 @@ print_round_prompt(#game_state{round=-1, peers=Peers}) ->
             io:format("Ready to play~n", [])
     end.
 
+% h@Mac-PWH2RVFGJ2
+
+shift_prompts(GameState=#game_state{round=Round, prompts=[]}) when Round rem 2 == 0 ->
+    % On leaving game, we also have to kill the input
+    io:format("hello~n~n~n~n", []),
+    GameState;
+
 shift_prompts(GameState=#game_state{round=Round}) when Round rem 2 == 0 ->
     GameState;
 
-shift_prompts(#game_state{round=Round, prompts=[]}) when Round rem 2 == 0 ->
-    % On leaving game, we also have to kill the input
-    #game_state{};
 
 shift_prompts(GameState=#game_state{round=Round, prompts=[_P | Prompts]}) when Round rem 2 == 1 ->
     GameState#game_state{prompts=Prompts}.

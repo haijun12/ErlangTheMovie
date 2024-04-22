@@ -14,7 +14,7 @@
 
 start() ->
     erlang:set_cookie(?COOKIE),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [nothing], []).
 
 update_network(Message) -> 
     ?DEBUG("update_network of ~p~n", [Message]),
@@ -24,7 +24,7 @@ update_network(Message) ->
         list -> gen_server:cast(?SERVER, {list})
     end.
 
-init([e]) -> 
+init([_]) -> 
     {ok, #state{map=[]}}.
 
 
