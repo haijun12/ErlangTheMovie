@@ -7,7 +7,7 @@
 select_words(FilePath, NumberOfCategories) ->
     {ok, File} = file:open(FilePath, [read]),
     Words = io:get_line(File, ''),
-    WordsList = string:tokens(Words, " .,\n"),
+    WordsList = string:tokens(Words, ",\n"),
     WordCount = length(WordsList),
     Categories = min(NumberOfCategories, WordCount),
     WordsToSelect = select_random_elements(WordsList, Categories),
