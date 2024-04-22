@@ -9,8 +9,8 @@
 -define (SERVER, scattegories).
 -define (DSERVER, peerdistribution).
 
--define(DEBUG(Format, Args), io:format("[DEBUG] [p.erl] " ++ Format, Args)).
-%% -define(DEBUG(Format, Args), void).
+%% -define(DEBUG(Format, Args), io:format("[DEBUG] [p.erl] " ++ Format, Args)).
+-define(DEBUG(Format, Args), void).
 
 %%============================================================================%%
 %%============================================================================%%
@@ -36,14 +36,18 @@ create(MePeerName, GameName, Network) ->
     MePeer = gamepeer:init(MePeerNode, MePeerName),
     GameState2 = game:add_player(MePeer, GameState),
     setup(GameState2),
+    game:print_game_state(GameState2),
     setup2().
 
 join(MePeerName, JoinPeerNode, Network) ->
     MePeerNode = node(),
     MePeer = gamepeer:init(MePeerNode, MePeerName),
     setup({joining, MePeer, Network}),
-    ok = gen_server:call(?SERVER, {clientjoin, JoinPeerNode}),
-    setup2().
+    case gen_server:call(?SERVER, {clientjoin, JoinPeerNode}) of
+        ok -> setup2();
+        started ->
+            io:format("The lobby has already started~n", [])
+    end.
 
 list_games(Network) ->
     PeerMap = gen_server:call({?DSERVER, Network}, {list}),
@@ -71,17 +75,25 @@ handle_call(Request, _From, State) ->
 %%============================================================================%%
 %% joining
 %%============================================================================%%
-handle_call({clientjoin, JoinPeerNode}, {joining, MePeer, _Network}) ->
+handle_call({clientjoin, JoinPeerNode}, {joining, MePeer, Network}) ->
     ?DEBUG("handle_call clientjoin~n", []),
-    {ok, GameState} = gen_server:call({?SERVER, JoinPeerNode}, {join, MePeer}),
+    case gen_server:call({?SERVER, JoinPeerNode}, {join, MePeer}) of
+        {ok, GameState} -> 
+            game:print_game_state(GameState),
+            {reply, ok, GameState};
+        started -> {stop, normal, started, {joining, MePeer, Network}}
+    end;
     %% TODO preserve network in gamestate
     %% gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
-    {reply, ok, GameState};
 
 handle_call({join, JoiningPeer}, GameState) ->
     ?DEBUG("handle_call join~n", []),
-    NewGameState = game:add_player(JoiningPeer, GameState),
-    {reply, {ok, NewGameState}, NewGameState};
+    case game:add_player(JoiningPeer, GameState) of
+        started -> {reply, started, GameState};
+        NewGameState ->
+            game:print_game_state(NewGameState),
+            {reply, {ok, NewGameState}, NewGameState}
+    end;
 
 %%============================================================================%%
 %% client input
@@ -89,6 +101,7 @@ handle_call({join, JoiningPeer}, GameState) ->
 
 handle_call({clientinput, Action}, GameState) ->
     NewGameState = game:client_input(Action, GameState),
+    game:print_game_state(NewGameState),
     {reply, ok, NewGameState};
 
 %%============================================================================%%
@@ -97,19 +110,17 @@ handle_call({clientinput, Action}, GameState) ->
 
 handle_call({peerinput, Action, FromPeer}, GameState) ->
     NewGameState = game:peer_input(Action, FromPeer, GameState),
-    {reply, ok, NewGameState}.
+    game:print_game_state(NewGameState),
+    {reply, ok, NewGameState};
 
 %%============================================================================%%
 %% leave
 %%============================================================================%%
 
-%% handle_call({clientleave}, GameState) ->
-    %% ?DEBUG("handle_call clientleave~n", []),
-    %% % gen_server:cast({?DSERVER, NetworkName}, {delete, node()}),
-    %% game:leave(GameState),
-    %% MePeer = MePeer %% TODO extract me from gamestate
-    %% {stop, normal, ok, MePeer};
-%% 
+handle_call({clientleave}, GameState) ->
+    game:client_leave(GameState),
+    {stop, normal, ok, GameState}.
+
 %% handle_call({peerinput, FromPeer, leave}, GameState) ->
     %% ?DEBUG("handle_call leave~n", []),
     %% NewGameState = game:peer_leave(FromPeer, GameState),
