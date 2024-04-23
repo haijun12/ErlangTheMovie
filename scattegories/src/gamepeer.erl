@@ -49,6 +49,9 @@ set_all_data(SetData, Peers) ->
 shift_data(Peers) ->
     lists:map(fun (Peer=#peer{data=Data}) -> Peer#peer{data_old=Data} end, Peers).
 
+unshift_data(Peers) ->
+    lists:map(fun (Peer=#peer{data_old=DataOld}) -> Peer#peer{data=DataOld} end, Peers).
+
 get_data(Peers) ->
     lists:map(fun (#peer{data=Data}) -> Data end, Peers).
 

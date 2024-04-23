@@ -85,6 +85,10 @@ peer_input({vote, Input}, FromPeer, GameState=#game_state{peers=Peers, round=Rou
     NewGameState = GameState#game_state{peers=NewPeers2},
     advance_if_all_ready(NewGameState);
 
+peer_input({alert_new_peer, JoiningPeer}, _FromPeer, GameState=#game_state{peers=Peers, round=Round}) when Round =/= -1 ->
+    NewPeers = gamepeer:unshift_data(Peers),
+    GameState#game_state{peers=[JoiningPeer | NewPeers], round=-1};
+
 peer_input({alert_new_peer, JoiningPeer}, _FromPeer, GameState=#game_state{peers=Peers}) ->
     %% print_game_state(GameState),
     GameState#game_state{peers=[JoiningPeer | Peers]};
