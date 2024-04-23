@@ -31,6 +31,7 @@ client_leave(GameState) ->
     GameState.
 
 client_input("ready", GameState=#game_state{peers=Peers, round=-1}) ->
+    %% timer:sleep(1000),
     update_peers(voteready, GameState),
     MePeer = gamepeer:get_me_peer(Peers),
     NewPeers = gamepeer:set_peer_data(ready, MePeer, Peers),
@@ -123,7 +124,7 @@ print_game_state(GameState=#game_state{round=Round, prompts=Prompts, game_name=G
     State = case Round of
                 -1 -> "lobby";
                 R1 when R1 rem 2 == 0 -> case Prompts of 
-                                            [] -> "Game Over";
+                                            [] -> "Game Over, type --leave to leave";
                                             _ -> "Inputting"
                                             end;
                 R2 when R2 rem 2 == 1 -> "Voting"
