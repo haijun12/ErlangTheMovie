@@ -1,6 +1,6 @@
 -module(game).
 
--export([init/2, add_player/2, client_input/2, peer_input/3, client_leave/1, print_game_state/1]).
+-export([init/2, add_player/2, client_input/2, peer_input/3, client_leave/1, print_game_state/2]).
 
 -record (game_state, {round = -1, prompts = [], peers = [], game_name, network}).
 
@@ -120,7 +120,15 @@ update_peers(Action, #game_state{peers=Peers}) ->
     PeerNodes = gamepeer:get_peer_nodes(PeersSansMePeer),
     util:pmap(fun (PeerNode) -> gen_server:call({?SERVER, PeerNode}, {peerinput, Action, MePeer}) end, PeerNodes).
 
-print_game_state(GameState=#game_state{round=Round, prompts=Prompts, game_name=GameName}) ->
+print_game_state(check, GameState=#game_state{peers=Peers}) ->
+    MePeer = gamepeer:get_me_peer(Peers),
+    Data = gamepeer:get_peer_data(MePeer),
+    case Data of
+        not_ready -> ok;
+        _ -> print_game_state(print, GameState)
+    end;
+
+print_game_state(print, GameState=#game_state{round=Round, prompts=Prompts, game_name=GameName}) ->
     State = case Round of
                 -1 -> "lobby";
                 R1 when R1 rem 2 == 0 -> case Prompts of 

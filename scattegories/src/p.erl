@@ -36,7 +36,7 @@ create(MePeerName, GameName, Network) ->
     MePeer = gamepeer:init(MePeerNode, MePeerName),
     GameState2 = game:add_player(MePeer, GameState),
     setup(GameState2),
-    game:print_game_state(GameState2),
+    game:print_game_state(print, GameState2),
     setup2().
 
 join(MePeerName, JoinPeerNode, Network) ->
@@ -79,7 +79,7 @@ handle_call({clientjoin, JoinPeerNode}, {joining, MePeer, Network}) ->
     ?DEBUG("handle_call clientjoin~n", []),
     case gen_server:call({?SERVER, JoinPeerNode}, {join, MePeer}) of
         {ok, GameState} -> 
-            game:print_game_state(GameState),
+            game:print_game_state(print, GameState),
             {reply, ok, GameState};
         started -> {stop, normal, started, {joining, MePeer, Network}}
     end;
@@ -91,7 +91,7 @@ handle_call({join, JoiningPeer}, GameState) ->
     case game:add_player(JoiningPeer, GameState) of
         started -> {reply, started, GameState};
         NewGameState ->
-            game:print_game_state(NewGameState),
+            game:print_game_state(print, NewGameState),
             {reply, {ok, NewGameState}, NewGameState}
     end;
 
@@ -101,7 +101,7 @@ handle_call({join, JoiningPeer}, GameState) ->
 
 handle_call({clientinput, Action}, GameState) ->
     NewGameState = game:client_input(Action, GameState),
-    game:print_game_state(NewGameState),
+    game:print_game_state(print, NewGameState),
     {reply, ok, NewGameState};
 
 %%============================================================================%%
@@ -110,7 +110,7 @@ handle_call({clientinput, Action}, GameState) ->
 
 handle_call({peerinput, Action, FromPeer}, GameState) ->
     NewGameState = game:peer_input(Action, FromPeer, GameState),
-    game:print_game_state(NewGameState),
+    game:print_game_state(check, NewGameState),
     {reply, ok, NewGameState};
 
 %%============================================================================%%
