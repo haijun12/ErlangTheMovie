@@ -91,7 +91,7 @@ handle_call({join, JoiningPeer}, GameState) ->
     case game:add_player(JoiningPeer, GameState) of
         started -> {reply, started, GameState};
         NewGameState ->
-            game:print_game_state(print, NewGameState),
+            % game:print_game_state(print, NewGameState),
             {reply, {ok, NewGameState}, NewGameState}
     end;
 
@@ -101,7 +101,7 @@ handle_call({join, JoiningPeer}, GameState) ->
 
 handle_call({clientinput, Action}, GameState) ->
     NewGameState = game:client_input(Action, GameState),
-    game:print_game_state(print, NewGameState),
+    % game:print_game_state(print, NewGameState),
     {reply, ok, NewGameState};
 
 %%============================================================================%%
@@ -110,7 +110,7 @@ handle_call({clientinput, Action}, GameState) ->
 
 handle_call({peerinput, Action, FromPeer}, GameState) ->
     NewGameState = game:peer_input(Action, FromPeer, GameState),
-    game:print_game_state(check, NewGameState),
+    % game:print_game_state(check, NewGameState),
     {reply, ok, NewGameState};
 
 %%============================================================================%%

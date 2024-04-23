@@ -71,6 +71,7 @@ client_input(Action, GameState) ->
 peer_input(voteready, FromPeer, GameState=#game_state{peers=Peers, round=-1}) ->
     NewPeers = gamepeer:set_peer_data(ready, FromPeer, Peers),
     NewGameState = GameState#game_state{peers=NewPeers},
+    % print_game_state(check, NewGameState),
     advance_if_all_ready(NewGameState);
 
 peer_input({submit, Input}, FromPeer, GameState=#game_state{peers=Peers, round=Round}) when Round rem 2 == 0 ->
@@ -133,14 +134,10 @@ print_game_state(print, GameState=#game_state{round=Round, prompts=Prompts, game
                 -1 -> "lobby";
                 R1 when R1 rem 2 == 0 -> case Prompts of 
                                             [] -> "Game Over, type --leave to leave";
-                                            _ -> "Inputting"
+                                            _ -> "Waiting on User input"
                                             end;
                 R2 when R2 rem 2 == 1 -> "Voting"
             end,
-    % State2 = case Prompts of
-    %              [] -> "game over";
-    %              _ -> State
-    %          end,
     io:format("~n~n~n~n~n~n~n~n~n~n~n~n", []),
     io:format("##########################################################################~n", []),
     io:format("Game: ~s   State: ~s~n~n", [GameName, State]),
@@ -154,12 +151,15 @@ advance_if_all_ready(GameState=#game_state{peers=Peers, round=Round}) ->
                                   _ -> Accum
                               end
                           end, ready, PeersData),
+    print_game_state(check, GameState),
     case IsReady of ready ->
         NewPeers = gamepeer:shift_data(Peers),
         NewPeers2 = gamepeer:set_all_data(not_ready, NewPeers),
         NewGameState = GameState#game_state{peers=NewPeers2, round=Round + 1},
         %% print_game_state(NewGameState),
-        shift_prompts(NewGameState);
+        NewGameState2 = shift_prompts(NewGameState),
+        print_game_state(print, NewGameState2),
+        NewGameState2;
     _ ->
         GameState
     end.
@@ -245,11 +245,8 @@ print_round_prompt(#game_state{round=-1, peers=Peers}) ->
             io:format("Ready to play~n", [])
     end.
 
-% h@Mac-PWH2RVFGJ2
-
 shift_prompts(GameState=#game_state{round=Round, prompts=[]}) when Round rem 2 == 0 ->
     % On leaving game, we also have to kill the input
-    io:format("hello~n~n~n~n", []),
     GameState;
 
 shift_prompts(GameState=#game_state{round=Round}) when Round rem 2 == 0 ->
