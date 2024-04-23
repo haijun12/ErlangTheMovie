@@ -89,10 +89,12 @@ peer_input({vote, Input}, FromPeer, GameState=#game_state{peers=Peers, round=Rou
 
 peer_input({alert_new_peer, JoiningPeer}, _FromPeer, GameState=#game_state{peers=Peers, round=Round}) when Round =/= -1 ->
     NewPeers = gamepeer:unshift_data(Peers),
+    print_game_state(check, GameState),
     GameState#game_state{peers=[JoiningPeer | NewPeers], round=-1};
 
 peer_input({alert_new_peer, JoiningPeer}, _FromPeer, GameState=#game_state{peers=Peers}) ->
     %% print_game_state(GameState),
+    print_game_state(check, GameState),
     GameState#game_state{peers=[JoiningPeer | Peers]};
 
 peer_input(leave, FromPeer, GameState=#game_state{peers=Peers}) ->
