@@ -1,7 +1,7 @@
 -module(p).
 -behaviour(gen_server).
 
--export([create/3, join/3, list_games/1]).
+-export([create/4, join/3, list_games/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
@@ -30,8 +30,9 @@ setup2() ->
     gen_server:call(?SERVER, {clientleave}),
     ok.
 
-create(MePeerName, GameName, Network) ->
-    GameState = game:init(GameName, Network),
+create(MePeerName, GameName, Network, Rounds) ->
+    io:format("~p~n", [Rounds]),
+    GameState = game:init(GameName, Network, Rounds),
     MePeerNode = node(),
     MePeer = gamepeer:init(MePeerNode, MePeerName),
     GameState2 = game:add_player(MePeer, GameState),

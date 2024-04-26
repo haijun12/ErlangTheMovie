@@ -1,6 +1,6 @@
 -module(game).
 
--export([init/2, add_player/2, client_input/2, peer_input/3, client_leave/1, print_game_state/2]).
+-export([init/3, add_player/2, client_input/2, peer_input/3, client_leave/1, print_game_state/2]).
 
 -record (game_state, {round = -1, prompts = [], peers = [], game_name, network}).
 
@@ -12,8 +12,8 @@
 %% -define(DEBUG(Format, Args), io:format("[DEBUG] [game.erl] " ++ Format, Args)).
 -define(DEBUG(Format, Args), void).
 
-init(GameName, Network) ->
-    Prompts = generate_prompts:select_prompts("categories.txt", ?ENDROUND),
+init(GameName, Network, Rounds) ->
+    Prompts = generate_prompts:select_prompts("categories.txt", Rounds),
     #game_state{prompts= Prompts, game_name=GameName, network=Network}.
 
 add_player(JoiningPeer, GameState=#game_state{round = -1, peers = Peers}) ->

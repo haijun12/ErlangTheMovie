@@ -25,7 +25,7 @@ start_erlang_interpreter_with_network() {
 start_erlang_interpreter() {
   local name=$1
   echo "Starting Erlang interpreter with module name $name..."
-  erl -pa _build/default/lib/*/ebin -sname "$name" -eval 'scattegories:start().' -noshell
+  erl -pa _build/default/lib/*/ebin -sname "$name" -eval "scattegories:start(\"${name}\")." -noshell
 }
 
 # Check if rebar3 is installed
@@ -36,7 +36,7 @@ then
 fi
 
 # Prompt the user for input
-echo "Enter the name of your node (or press Enter to skip):"
+echo "Enter a username (or press Enter to skip):"
 read name
 DEFAULT_NETWORK="scattegories_network"
 # Compile the rebar3 directory
