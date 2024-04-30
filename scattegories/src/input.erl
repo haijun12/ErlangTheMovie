@@ -11,12 +11,9 @@ handle_input() ->
     case io:get_line("SCATTERGORIES # ") of
         "--leave\n" ->
             ok;
-        "--list\n" ->
-            gen_server:call(?SERVER, {list}),
-            handle_input();
         Input ->
             [_H | Input2] = lists:reverse(Input),
             Input3 = lists:reverse(Input2),
-            gen_server:call(?SERVER, {clientinput, Input3}),
+            gen_server:cast(?SERVER, {clientinput, Input3}),
             handle_input()
     end.

@@ -1,7 +1,7 @@
 -module(p).
 -behaviour(gen_server).
 
--export([create/4, join/3, list_games/1]).
+-export([create/4, join/3]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
@@ -27,7 +27,7 @@ setup(GameState) ->
 
 setup2() ->
     input:handle_input(),
-    gen_server:call(?SERVER, {clientleave}),
+    gen_server:cast(?SERVER, {clientleave}),
     ok.
 
 create(MePeerName, GameName, Network, Rounds) ->
@@ -44,15 +44,11 @@ join(MePeerName, JoinPeerNode, Network) ->
     MePeerNode = node(),
     MePeer = gamepeer:init(MePeerNode, MePeerName),
     setup({joining, MePeer, Network}),
-    case gen_server:call(?SERVER, {clientjoin, JoinPeerNode}) of
+    case gen_server:cast(?SERVER, {clientjoin, JoinPeerNode}) of
         ok -> setup2();
         started ->
             io:format("The lobby has already started~n", [])
     end.
-
-list_games(Network) ->
-    PeerMap = gen_server:call({?DSERVER, Network}, {list}),
-    io:format("~p~n", [PeerMap]).
 
 
 %%============================================================================%%
@@ -66,9 +62,6 @@ list_games(Network) ->
 init([GameState]) ->
     {ok, GameState}.
 
-handle_cast(_Request, State) ->
-    {noreply, State}.
-
 %% We don't need the from field
 handle_call(Request, _From, State) ->
     handle_call(Request, State).
@@ -76,16 +69,6 @@ handle_call(Request, _From, State) ->
 %%============================================================================%%
 %% joining
 %%============================================================================%%
-handle_call({clientjoin, JoinPeerNode}, {joining, MePeer, Network}) ->
-    ?DEBUG("handle_call clientjoin~n", []),
-    case gen_server:call({?SERVER, JoinPeerNode}, {join, MePeer}) of
-        {ok, GameState} -> 
-            game:print_game_state(print, GameState),
-            {reply, ok, GameState};
-        started -> {stop, normal, started, {joining, MePeer, Network}}
-    end;
-    %% TODO preserve network in gamestate
-    %% gen_server:cast({?DSERVER, NetworkName}, {add, node(), GameName}),
 
 handle_call({join, JoiningPeer}, GameState) ->
     ?DEBUG("handle_call join~n", []),
@@ -94,33 +77,40 @@ handle_call({join, JoiningPeer}, GameState) ->
         NewGameState ->
             % game:print_game_state(print, NewGameState),
             {reply, {ok, NewGameState}, NewGameState}
+    end.
+
+handle_cast({clientjoin, JoinPeerNode}, {joining, MePeer, Network}) ->
+    ?DEBUG("handle_call clientjoin~n", []),
+    case gen_server:call({?SERVER, JoinPeerNode}, {join, MePeer}) of
+        {ok, GameState} -> 
+            game:print_game_state(print, GameState),
+            {noreply, GameState};
+        started -> {stop, normal, {joining, MePeer, Network}}
     end;
 
 %%============================================================================%%
 %% client input
 %%============================================================================%%
 
-handle_call({clientinput, Action}, GameState) ->
+handle_cast({clientinput, Action}, GameState) ->
     NewGameState = game:client_input(Action, GameState),
-    % game:print_game_state(print, NewGameState),
-    {reply, ok, NewGameState};
+    {noreply, NewGameState};
 
 %%============================================================================%%
 %% peer input
 %%============================================================================%%
 
-handle_call({peerinput, Action, FromPeer}, GameState) ->
+handle_cast({peerinput, Action, FromPeer}, GameState) ->
     NewGameState = game:peer_input(Action, FromPeer, GameState),
-    % game:print_game_state(check, NewGameState),
-    {reply, ok, NewGameState};
+    {noreply, NewGameState};
 
 %%============================================================================%%
 %% leave
 %%============================================================================%%
 
-handle_call({clientleave}, GameState) ->
+handle_cast({clientleave}, GameState) ->
     game:client_leave(GameState),
-    {stop, normal, ok, GameState}.
+    {stop, normal, GameState};
 
 %% handle_call({peerinput, FromPeer, leave}, GameState) ->
     %% ?DEBUG("handle_call leave~n", []),
@@ -140,6 +130,9 @@ handle_call({clientleave}, GameState) ->
 %%============================================================================%%
 %% 
 %%============================================================================%%
+
+handle_cast(_Request, State) ->
+    {noreply, State}.
 
 handle_info(_Info, State) ->
     {noreply, State}.

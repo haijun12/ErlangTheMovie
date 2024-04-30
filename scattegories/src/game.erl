@@ -119,12 +119,13 @@ peer_input(Action, _FromPeer, GameState) ->
 update_peers(_, #game_state{peers=[]}) ->
     %% this will only happen at the beginning of the game when the first user
     %% adds themselves
-    [ok];
+    ok;
 update_peers(Action, #game_state{peers=Peers}) ->
     MePeer = gamepeer:get_me_peer(Peers),
     PeersSansMePeer = lists:delete(MePeer, Peers),
     PeerNodes = gamepeer:get_peer_nodes(PeersSansMePeer),
-    util:pmap(fun (PeerNode) -> gen_server:call({?SERVER, PeerNode}, {peerinput, Action, MePeer}) end, PeerNodes).
+    lists:map(fun (PeerNode) -> gen_server:cast({?SERVER, PeerNode}, {peerinput, Action, MePeer}) end, PeerNodes),
+    ok.
 
 print_game_state(check, GameState=#game_state{peers=Peers}) ->
     MePeer = gamepeer:get_me_peer(Peers),
