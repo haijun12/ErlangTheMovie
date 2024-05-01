@@ -31,7 +31,7 @@ client_leave(GameState) ->
     GameState.
 
 client_input("ready", GameState=#game_state{peers=Peers, round=-1}) ->
-    %% timer:sleep(1000),
+    %% timer:sleep(2000),
     update_peers(voteready, GameState),
     MePeer = gamepeer:get_me_peer(Peers),
     NewPeers = gamepeer:set_peer_data(ready, MePeer, Peers),

@@ -1,6 +1,6 @@
 -module(gamepeer).
 
--export([init/2, get_me_peer/1, get_peer_nodes/1, set_peer_data/3, set_all_data/2, shift_data/1, get_data/1, get_username_data_old/1, get_username_data/1, remove_peer/2, get_peer_data/1]).
+-export([init/2, get_me_peer/1, get_peer_nodes/1, set_peer_data/3, set_all_data/2, shift_data/1, unshift_data/1, get_data/1, get_username_data_old/1, get_username_data/1, remove_peer/2, get_peer_data/1]).
 
 -export([add_peer_points/2, get_current_points/1, check_valid_vote/2]).
 -record (peer, {node, name, data, data_old, points}).
