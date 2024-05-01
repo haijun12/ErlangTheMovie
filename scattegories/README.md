@@ -2,13 +2,15 @@ scattegories
 Haijun, Adnan, Jackson
 =====
 
-An OTP library
+A fun board game computerized
 
 Build
 -----
 
-    $ rebar3 compile
+    rebar3 compile
 
 Build & Run
 -----
-    $ ./runme.sh
+    cd scattegories
+
+    ./runme.sh
