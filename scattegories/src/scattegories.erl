@@ -21,7 +21,7 @@ start(UserName) ->
         p:join(UserName, PeerNode, nothing),
         start(UserName);
     _ ->
-        io:format("Invalid input. Please enter 'c' to create a room or 'j' to join a room.~n"),
+        io:format("Invalid input. Please enter 'create' to create a room or 'join' to join a room.~n"),
             start(UserName)
     end.
 
