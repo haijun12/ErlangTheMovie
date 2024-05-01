@@ -15,7 +15,8 @@ start_erlang_interpreter_with_admin() {
 start_erlang_interpreter() {
   local name=$1
   echo "Starting Erlang interpreter with module name $name..."
-  erl -pa _build/default/lib/*/ebin -sname "$name" -eval "scattegories:start(\"${name}\")." -noshell
+  erl -pa _build/default/lib/*/ebin -sname "$name" -eval \
+                  "scattegories:start(\"${name}\")." -noshell
 }
 
 # Check if rebar3 is installed
@@ -32,7 +33,7 @@ DEFAULT_NETWORK="scattegories_network"
 # Compile the rebar3 directory
 compile_rebar3_directory
 
-# Start the Erlang interpreter with the compiled modules in the code path and the specified module name
+# Start the Erlang interpreter
 if [ "$name" == "admin" ]; then
     start_erlang_interpreter_with_admin "$name"
 elif [[ -n "$name" ]]; then

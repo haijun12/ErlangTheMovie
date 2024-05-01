@@ -71,11 +71,15 @@ set_all_data(SetData, Peers) ->
 
 % shift_data(Peers): Moves the current data to an older state
 shift_data(Peers) ->
-    lists:map(fun (Peer=#peer{data=Data}) -> Peer#peer{data_old=Data} end, Peers).
+    lists:map(fun (Peer=#peer{data=Data}) -> 
+                Peer#peer{data_old=Data} 
+                end, Peers).
 
 % unshift_data(Peers): Moves the old data to the current data
 unshift_data(Peers) ->
-    lists:map(fun (Peer=#peer{data_old=DataOld}) -> Peer#peer{data=DataOld} end, Peers).
+    lists:map(fun (Peer=#peer{data_old=DataOld}) -> 
+                Peer#peer{data=DataOld} 
+                end, Peers).
 
 % get_data (Peers): Returns all the peers' data
 get_data(Peers) ->
@@ -87,7 +91,9 @@ get_username_data(Peers) ->
 
 % get_username_data_old (Peers): Returns a list of Name * DataOld
 get_username_data_old(Peers) ->
-    lists:map(fun (#peer{name=Name, data_old=DataOld}) -> {Name, DataOld} end, Peers).
+    lists:map(fun (#peer{name=Name, data_old=DataOld}) -> 
+                {Name, DataOld} 
+                end, Peers).
 
 % remove_peer (Peer, Peers): Removes the Peer from the Peer list
 remove_peer(#peer{node=RemoveNode}, Peers) ->
