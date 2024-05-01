@@ -1,3 +1,7 @@
+%%% By Haijun S, Jackson W, and Adnan J. 2024
+%%% 
+%%% P Module
+%%% 
 -module(p).
 -behaviour(gen_server).
 

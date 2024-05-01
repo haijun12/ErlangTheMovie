@@ -1,3 +1,7 @@
+%%% By Haijun S, Jackson W, and Adnan J. 2024
+%%% 
+%%% generate_prompts Module
+%%% 
 -module(generate_prompts).
 -export([select_words/2, select_random_elements/2, select_letters/1,select_prompts/2]).
 

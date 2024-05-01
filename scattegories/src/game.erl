@@ -1,3 +1,7 @@
+%%% By Haijun S, Jackson W, and Adnan J. 2024
+%%% 
+%%% Game Module
+%%% 
 -module(game).
 
 -export([init/3, add_player/2, client_input/2, peer_input/3, client_leave/1, print_game_state/2]).

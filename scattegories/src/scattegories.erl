@@ -1,7 +1,12 @@
+%%% By Haijun S, Jackson W, and Adnan J. 2024
+%%% 
+%%% Scattegories Module
+%%% 
 -module(scattegories).
 
 -export([start/1]).
 
+% start(UserName): starts the interpreter for the game
 start(UserName) ->
     Mode = io:get_line("Would you like to create or join a room? [Enter: create or join]:  "),
     case Mode of "create\n" ->

@@ -1,3 +1,7 @@
+%%% By Haijun S, Jackson W, and Adnan J. 2024
+%%% 
+%%% Input Module
+%%% 
 -module(input).
 
 -export([handle_input/0]).
@@ -12,6 +16,7 @@ handle_input() ->
         "--leave\n" ->
             ok;
         Input ->
+            % Gets rid of newline
             [_H | Input2] = lists:reverse(Input),
             Input3 = lists:reverse(Input2),
             gen_server:cast(?SERVER, {clientinput, Input3}),

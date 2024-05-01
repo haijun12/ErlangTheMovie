@@ -12,16 +12,6 @@ start_erlang_interpreter_with_admin() {
   erl -pa _build/default/lib/*/ebin -sname "$name"
 }
 
-start_erlang_interpreter_with_network() {
-  local name=$1
-  echo "Starting Erlang interpreter with module name $name and the network"
-  HOSTNAME=$(hostname | cut -d '.' -f 1)
-  NETWORK="$name@$HOSTNAME"
-  export NETWORK
-  echo "$NETWORK"
-  erl -pa _build/default/lib/*/ebin -sname "$name" -eval 'p_network:start().'
-}
-
 start_erlang_interpreter() {
   local name=$1
   echo "Starting Erlang interpreter with module name $name..."
@@ -43,9 +33,7 @@ DEFAULT_NETWORK="scattegories_network"
 compile_rebar3_directory
 
 # Start the Erlang interpreter with the compiled modules in the code path and the specified module name
-if [ "$name" == "$DEFAULT_NETWORK" ]; then
-    start_erlang_interpreter_with_network "$name"
-elif [ "$name" == "admin" ]; then
+if [ "$name" == "admin" ]; then
     start_erlang_interpreter_with_admin "$name"
 elif [[ -n "$name" ]]; then
     start_erlang_interpreter "$name"
