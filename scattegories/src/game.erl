@@ -101,9 +101,8 @@ when Round rem 2 == 1 ->
     end;
 
 %% Base case
-client_input(Action, GameState) ->
+client_input(_Action, GameState) ->
     io:format("Unrecognized client action~n", []),
-    ?DEBUG("Action was ~p~n", [Action]),
     GameState.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -133,7 +132,7 @@ peer_input({vote, Username}, FromPeer,
            GameState=#game_state{peers=Peers, round=Round})
 when Round rem 2 == 1 ->
     NewPeers = gamepeer:set_peer_data(Username, FromPeer, Peers),
-    NewPeers2 = gamepeer:add_peer_points(Input, NewPeers),
+    NewPeers2 = gamepeer:add_peer_points(Username, NewPeers),
     NewGameState = GameState#game_state{peers=NewPeers2},
     advance_if_all_ready(NewGameState);
 
@@ -162,10 +161,8 @@ peer_input(leave, FromPeer, GameState=#game_state{peers=Peers}) ->
     advance_if_all_ready(NewGameState);
 
 %% Base case
-peer_input(Action, _FromPeer, GameState) ->
+peer_input(_Action, _FromPeer, GameState) ->
     io:format("Unrecognized peer action~n", []),
-    ?DEBUG("Action was ~p~n", [Action]),
-    ?DEBUG("FromPeer was ~p~n", [FromPeer]),
     GameState.
 
 
