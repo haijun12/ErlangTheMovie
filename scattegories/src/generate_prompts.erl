@@ -3,7 +3,8 @@
 %%% generate_prompts Module
 %%% 
 -module(generate_prompts).
--export([select_words/2, select_random_elements/2, select_letters/1,select_prompts/2]).
+-export([select_words/2, select_random_elements/2, select_letters/1,
+         select_prompts/2]).
 
 -import(math, [pow/2]).
 
@@ -38,8 +39,10 @@ select_random_elements(List, N) when N > 0 ->
 
 %% select_letters(NumberOfLetters): Returns a list of letters given the 
 %% number of letters to choose
-select_letters(NumberOfLetters) when is_integer(NumberOfLetters), NumberOfLetters >= 0 ->
-    Alphabet = lists:seq($A, $Z), % Generate a list of ASCII values for uppercase letters
+select_letters(NumberOfLetters)
+when is_integer(NumberOfLetters), NumberOfLetters >= 0 ->
+    % Generate a list of ASCII values for uppercase letters
+    Alphabet = lists:seq($A, $Z),
     UniqueLettersList = select_unique_elements(Alphabet, NumberOfLetters, []),
     lists:map(fun(X) -> [X] end, UniqueLettersList).
 

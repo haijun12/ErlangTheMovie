@@ -254,14 +254,18 @@ print_stats(#game_state{prompts=[], peers=Peers}) ->
     % Show score here
     LeaderBoard = gamepeer:get_current_points(Peers),
     io:format("Final Leaderboard:~n", []),
-    lists:map(fun ({Username, Points}) -> io:format("~s: ~p~n", [Username, Points]) end, LeaderBoard);
+    lists:map(fun ({Username, Points}) ->
+                  io:format("~s: ~p~n", [Username, Points])
+              end, LeaderBoard);
 
 %% prompt remaining
 print_stats(#game_state{prompts=[{Letter, Prompt} | _T], peers=Peers}) ->
     % Show score here
     LeaderBoard = gamepeer:get_current_points(Peers),
     io:format("Current Leaderboard:~n", []),
-    lists:map(fun ({Username, Points}) -> io:format("~s: ~p~n", [Username, Points]) end, LeaderBoard),
+    lists:map(fun ({Username, Points}) ->
+                  io:format("~s: ~p~n", [Username, Points])
+              end, LeaderBoard),
     % Print prompts for next round
     io:format("~nPrompt: ~s, Letter: ~s~n~n", [Prompt, Letter]).
 
@@ -269,15 +273,19 @@ print_stats(#game_state{prompts=[{Letter, Prompt} | _T], peers=Peers}) ->
 %% print the information needed for each round
 
 %% empty prompts = game over screen
-print_round_prompt(#game_state{round=Round, prompts=[], peers=Peers}) when Round rem 2 == 0 ->
+print_round_prompt(#game_state{round=Round, prompts=[], peers=Peers})
+when Round rem 2 == 0 ->
     io:format("Game Over!~n", []),
     % Show score here
     LeaderBoard = gamepeer:get_current_points(Peers),
     io:format("Leaderboard:~n", []),
-    lists:map(fun ({Username, Points}) -> io:format("~s: ~p~n", [Username, Points]) end, LeaderBoard);
+    lists:map(fun ({Username, Points}) ->
+                  io:format("~s: ~p~n", [Username, Points])
+              end, LeaderBoard);
 
 %% even round = enter answer or answer submitted
-print_round_prompt(GameState=#game_state{round=Round, peers=Peers}) when Round rem 2 == 0 ->
+print_round_prompt(GameState=#game_state{round=Round, peers=Peers})
+when Round rem 2 == 0 ->
     print_stats(GameState),
     io:format("Submitted: ~n~n", []),
     UsernameData = gamepeer:get_username_data(Peers),
@@ -297,11 +305,14 @@ print_round_prompt(GameState=#game_state{round=Round, peers=Peers}) when Round r
     end;
 
 %% odd round = vote by username or voted username
-print_round_prompt(GameState=#game_state{round=Round, peers=Peers}) when Round rem 2 == 1 ->
+print_round_prompt(GameState=#game_state{round=Round, peers=Peers})
+when Round rem 2 == 1 ->
     print_stats(GameState),
     io:format("Responses:~n", []),
     UsernameDataOld = gamepeer:get_username_data_old(Peers),
-    lists:map(fun ({Username, Data}) -> io:format("~s: ~s~n", [Username, Data]) end, UsernameDataOld),
+    lists:map(fun ({Username, Data}) ->
+                  io:format("~s: ~s~n", [Username, Data])
+              end, UsernameDataOld),
     io:format("~nVotes: ~n", []),
     UsernameData = gamepeer:get_username_data(Peers),
     lists:map(fun ({Username, Data}) ->
@@ -342,7 +353,8 @@ print_round_prompt(#game_state{round=-1, peers=Peers}) ->
 %% pop the prompts to advance to the next prompt if necessary
 
 %% game over (do nothing)
-shift_prompts(GameState=#game_state{round=Round, prompts=[]}) when Round rem 2 == 0 ->
+shift_prompts(GameState=#game_state{round=Round, prompts=[]})
+when Round rem 2 == 0 ->
     % On leaving game, we also have to kill the input
     GameState;
 
@@ -351,5 +363,6 @@ shift_prompts(GameState=#game_state{round=Round}) when Round rem 2 == 0 ->
     GameState;
 
 %% odd round (pop)
-shift_prompts(GameState=#game_state{round=Round, prompts=[_P | Prompts]}) when Round rem 2 == 1 ->
+shift_prompts(GameState=#game_state{round=Round, prompts=[_P | Prompts]})
+when Round rem 2 == 1 ->
     GameState#game_state{prompts=Prompts}.

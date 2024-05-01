@@ -10,6 +10,8 @@
 -define (SERVER, scattegories).
 -define (DSERVER, peerdistribution).
 
+%% handle_input
+%% input loop, send via a cast to client_input in p.erl
 
 handle_input() ->
     case io:get_line("SCATTERGORIES # ") of

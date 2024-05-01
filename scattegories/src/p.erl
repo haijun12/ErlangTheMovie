@@ -24,15 +24,24 @@
 %%============================================================================%%
 %%============================================================================%%
 
+%% setup GameState
+%% sets up the gen_server
+
 setup(GameState) ->
     erlang:set_cookie(?COOKIE),
     gen_server:start_link({local, ?SERVER}, ?MODULE, [GameState], []),
     ok.
 
+%% setup2
+%% starts the input process and leaves when that finishes
+
 setup2() ->
     input:handle_input(),
     gen_server:cast(?SERVER, {clientleave}),
     ok.
+
+%% create MePeerName, Gamename, Network, Rounds
+%% creates a new lobby
 
 create(MePeerName, GameName, Network, Rounds) ->
     io:format("~p~n", [Rounds]),
@@ -43,6 +52,9 @@ create(MePeerName, GameName, Network, Rounds) ->
     setup(GameState2),
     game:print_game_state(print, GameState2),
     setup2().
+
+%% join MePeerName, JoinPeerNode, Network
+%% joins an existing lobby
 
 join(MePeerName, JoinPeerNode, Network) ->
     MePeerNode = node(),
